@@ -13,9 +13,20 @@ class FFmpegServiceTest {
     @Test
     void testFFmpegServiceDetection() {
         FFmpegService service = new FFmpegService();
-        // Since C:\yt-dlp\ffmpeg.exe exists, it should be available
-        assertTrue(service.isAvailable(), "FFmpeg should be detected on the system");
+        assertTrue(service.isAvailable(), "FFmpeg should be detected via locator");
         assertNotNull(service.getFFmpegExecutable());
+    }
+
+    @Test
+    void testSystemPropertyOverride() {
+        System.setProperty("slide-md.ffmpeg", "custom-ffmpeg-mock.exe");
+        try {
+            // Since mock doesn't exist on disk, locator should fall back gracefully
+            String found = FFmpegLocator.locateFFmpeg();
+            assertNotNull(found);
+        } finally {
+            System.clearProperty("slide-md.ffmpeg");
+        }
     }
 
     @Test

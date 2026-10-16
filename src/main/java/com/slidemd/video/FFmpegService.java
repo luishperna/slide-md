@@ -16,7 +16,6 @@ import java.util.logging.Logger;
 
 public class FFmpegService {
     private static final Logger LOGGER = Logger.getLogger(FFmpegService.class.getName());
-    private static final String DEFAULT_KNOWN_PATH = "C:\\yt-dlp\\ffmpeg.exe";
     private static final Path CACHE_DIR = Path.of(".slide-md-cache", "videos");
 
     private final String ffmpegExecutable;
@@ -27,7 +26,11 @@ public class FFmpegService {
     });
 
     public FFmpegService() {
-        this.ffmpegExecutable = findFFmpegExecutable();
+        this(FFmpegLocator.locateFFmpeg());
+    }
+
+    public FFmpegService(String customExecutable) {
+        this.ffmpegExecutable = customExecutable;
         try {
             Files.createDirectories(CACHE_DIR);
         } catch (IOException e) {
@@ -200,25 +203,6 @@ public class FFmpegService {
     }
 
     private static String findFFmpegExecutable() {
-        File known = new File(DEFAULT_KNOWN_PATH);
-        if (known.exists() && known.canExecute()) {
-            return known.getAbsolutePath();
-        }
-
-        try {
-            Process p = new ProcessBuilder("where.exe", "ffmpeg").start();
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
-                String line = br.readLine();
-                if (line != null && !line.trim().isEmpty()) {
-                    File found = new File(line.trim());
-                    if (found.exists()) {
-                        return found.getAbsolutePath();
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-        }
-
-        return null;
+        return FFmpegLocator.locateFFmpeg();
     }
 }

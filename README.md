@@ -111,4 +111,42 @@ Para executar diretamente:
 ```powershell
 java -jar target/slide-md-1.0.0-SNAPSHOT.jar [caminho/apresentacao.md]
 ```
-Você também pode associar a extensão `.md` ao executável para abrir suas apresentações com duplo clique!
+
+---
+
+## 📦 Gerando Instaladores e Executáveis Nativos (Windows, Linux, macOS)
+
+O **slide-md** utiliza a ferramenta oficial **`jpackage`** (inclusa no próprio Java 21) para gerar executáveis nativos com instalador e runtime Java embutido (o usuário final nem precisa ter o Java instalado na máquina dele!).
+
+### Como o FFmpeg é Localizado (Sem Caminhos Fixos da sua Máquina)
+O serviço `FFmpegLocator` busca o binário de forma dinâmica na seguinte ordem de prioridade:
+1. **Pasta do Aplicativo Instalado**: `./ffmpeg` ou `./bin/ffmpeg` (quando embutido no instalador).
+2. **Pasta do Usuário**: `~/.slide-md/bin/ffmpeg` (permitindo uso portátil sem permissões de admin).
+3. **PATH do Sistema Operacional**: Detecta automaticamente se o usuário tiver `ffmpeg` instalado no Windows (`where.exe`), Linux ou macOS (`which` ou `/opt/homebrew/bin/ffmpeg`).
+4. **Variável de Ambiente ou Parâmetro**: `SLIDEMD_FFMPEG` ou `-Dslide-md.ffmpeg=/caminho/ffmpeg`.
+
+### Gerando o Executável Nativo com Runtime Embutido:
+
+#### Windows (`.exe` portátil ou `.msi` instalador):
+```powershell
+# 1. Empacotar o JAR
+./mvnw package -DskipTests
+
+# 2. Gerar pasta portátil com executável nativo (slide-md.exe + JRE nativo)
+jpackage --type app-image --dest dist --name slide-md --input target --main-jar slide-md-1.0.0-SNAPSHOT.jar --main-class com.slidemd.MainLauncher
+
+# (Opcional) Copie o ffmpeg.exe para dist/slide-md/app/ para distribuição 100% autônoma!
+```
+
+#### Linux (`.deb` / `.rpm` ou pasta com binário ELF):
+```bash
+./mvnw package -DskipTests
+jpackage --type deb --dest dist --name slide-md --input target --main-jar slide-md-1.0.0-SNAPSHOT.jar --main-class com.slidemd.MainLauncher
+```
+
+#### macOS (`.dmg` / `.app` com suporte a Apple Silicon e Intel):
+```bash
+./mvnw package -DskipTests
+jpackage --type dmg --dest dist --name slide-md --input target --main-jar slide-md-1.0.0-SNAPSHOT.jar --main-class com.slidemd.MainLauncher
+```
+
