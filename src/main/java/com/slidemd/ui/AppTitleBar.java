@@ -41,24 +41,24 @@ public class AppTitleBar extends HBox {
         setMaxHeight(38);
         setPadding(new Insets(0, 0, 0, 14));
 
-        // Antigravity dark theme: #161616
+        // Antigravity dark monochrome theme: #161616
         setStyle("-fx-background-color: #161616;" +
-                 "-fx-border-color: transparent transparent rgba(255, 255, 255, 0.06) transparent;" +
+                 "-fx-border-color: transparent transparent #262626 transparent;" +
                  "-fx-border-width: 1px;");
 
         // 1. Left Section: Logo & Presentation Title
         Label logoLabel = new Label("⚡ slide-md");
         logoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12.5));
-        logoLabel.setTextFill(Color.web("#38bdf8"));
+        logoLabel.setTextFill(Color.web("#ffffff"));
 
         Label separator = new Label("—");
         separator.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
-        separator.setTextFill(Color.web("#475569"));
+        separator.setTextFill(Color.web("#404040"));
         HBox.setMargin(separator, new Insets(0, 8, 0, 8));
 
         titleLabel = new Label(initialTitle != null ? initialTitle : "Início");
         titleLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
-        titleLabel.setTextFill(Color.web("#94a3b8"));
+        titleLabel.setTextFill(Color.web("#a3a3a3"));
         titleLabel.setMaxWidth(200);
 
         HBox leftBox = new HBox(logoLabel, separator, titleLabel);
@@ -76,7 +76,7 @@ public class AppTitleBar extends HBox {
         Button editorBtn = createDockButton(createEditorIcon(), "Editor Markdown (M / E)", onToggleEditor);
 
         Label dockDivider = new Label("|");
-        dockDivider.setTextFill(Color.web("#334155"));
+        dockDivider.setTextFill(Color.web("#262626"));
         dockDivider.setFont(Font.font("Segoe UI", 12));
         HBox.setMargin(dockDivider, new Insets(0, 4, 0, 4));
 
@@ -85,7 +85,7 @@ public class AppTitleBar extends HBox {
 
         counterLabel = new Label("-- / --");
         counterLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11.5));
-        counterLabel.setTextFill(Color.web("#cbd5e1"));
+        counterLabel.setTextFill(Color.web("#e5e5e5"));
         HBox.setMargin(counterLabel, new Insets(0, 6, 0, 6));
 
         nextIcon = createRightChevron();
@@ -166,8 +166,8 @@ public class AppTitleBar extends HBox {
         counterLabel.setText(String.format("%02d / %02d", currentSlide + 1, totalSlides));
         prevBtn.setDisable(currentSlide <= 0);
         nextBtn.setDisable(currentSlide >= totalSlides - 1);
-        prevIcon.setStroke(currentSlide <= 0 ? Color.web("#475569") : Color.web("#38bdf8"));
-        nextIcon.setStroke(currentSlide >= totalSlides - 1 ? Color.web("#475569") : Color.web("#38bdf8"));
+        prevIcon.setStroke(currentSlide <= 0 ? Color.web("#404040") : Color.web("#d4d4d4"));
+        nextIcon.setStroke(currentSlide >= totalSlides - 1 ? Color.web("#404040") : Color.web("#d4d4d4"));
     }
 
     public void setNavigationVisible(boolean visible) {
@@ -193,7 +193,7 @@ public class AppTitleBar extends HBox {
                            "-fx-cursor: hand;" +
                            "-fx-padding: 0;";
 
-        String hoverStyle = "-fx-background-color: #2e2e2e;" +
+        String hoverStyle = "-fx-background-color: #262626;" +
                             "-fx-background-radius: 4px;" +
                             "-fx-cursor: hand;" +
                             "-fx-padding: 0;";
@@ -206,7 +206,7 @@ public class AppTitleBar extends HBox {
         btn.setOnMouseExited(e -> {
             btn.setStyle(baseStyle);
             if (!btn.isDisabled()) {
-                icon.setStroke(icon == prevIcon || icon == nextIcon ? Color.web("#38bdf8") : Color.web("#94a3b8"));
+                icon.setStroke(icon == prevIcon || icon == nextIcon ? Color.web("#d4d4d4") : Color.web("#a3a3a3"));
             }
         });
 
@@ -224,7 +224,7 @@ public class AppTitleBar extends HBox {
     private SVGPath createNewDocIcon() {
         SVGPath path = new SVGPath();
         path.setContent("M 2 1.5 L 6.5 1.5 L 9.5 4.5 L 9.5 11.5 L 2 11.5 Z M 6.5 1.5 L 6.5 4.5 L 9.5 4.5 M 4 7.5 L 7.5 7.5 M 5.75 5.75 L 5.75 9.25");
-        path.setStroke(Color.web("#94a3b8"));
+        path.setStroke(Color.web("#a3a3a3"));
         path.setStrokeWidth(1.15);
         path.setStrokeLineCap(StrokeLineCap.ROUND);
         path.setFill(Color.TRANSPARENT);
@@ -234,7 +234,7 @@ public class AppTitleBar extends HBox {
     private SVGPath createFolderIcon() {
         SVGPath path = new SVGPath();
         path.setContent("M 1.5 2.5 L 4.5 2.5 L 6 4 L 10.5 4 L 10.5 10.5 L 1.5 10.5 Z");
-        path.setStroke(Color.web("#94a3b8"));
+        path.setStroke(Color.web("#a3a3a3"));
         path.setStrokeWidth(1.15);
         path.setStrokeLineCap(StrokeLineCap.ROUND);
         path.setFill(Color.TRANSPARENT);
@@ -244,7 +244,7 @@ public class AppTitleBar extends HBox {
     private SVGPath createEditorIcon() {
         SVGPath path = new SVGPath();
         path.setContent("M 1.5 10.5 L 4 10.5 L 10.5 4 L 8 1.5 L 1.5 8 Z M 7 2.5 L 9.5 5");
-        path.setStroke(Color.web("#94a3b8"));
+        path.setStroke(Color.web("#a3a3a3"));
         path.setStrokeWidth(1.15);
         path.setStrokeLineCap(StrokeLineCap.ROUND);
         path.setFill(Color.TRANSPARENT);
@@ -254,7 +254,7 @@ public class AppTitleBar extends HBox {
     private SVGPath createLeftChevron() {
         SVGPath path = new SVGPath();
         path.setContent("M 6.5 2 L 2.5 6 L 6.5 10");
-        path.setStroke(Color.web("#38bdf8"));
+        path.setStroke(Color.web("#d4d4d4"));
         path.setStrokeWidth(1.4);
         path.setStrokeLineCap(StrokeLineCap.ROUND);
         path.setFill(Color.TRANSPARENT);
@@ -264,7 +264,7 @@ public class AppTitleBar extends HBox {
     private SVGPath createRightChevron() {
         SVGPath path = new SVGPath();
         path.setContent("M 3.5 2 L 7.5 6 L 3.5 10");
-        path.setStroke(Color.web("#38bdf8"));
+        path.setStroke(Color.web("#d4d4d4"));
         path.setStrokeWidth(1.4);
         path.setStrokeLineCap(StrokeLineCap.ROUND);
         path.setFill(Color.TRANSPARENT);

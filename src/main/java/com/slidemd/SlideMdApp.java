@@ -61,7 +61,7 @@ public class SlideMdApp extends Application {
         stage.setFullScreenExitHint("");
 
         BorderPane mainContainer = new BorderPane();
-        mainContainer.setStyle("-fx-background-color: #000000;");
+        mainContainer.setStyle("-fx-background-color: #101010;");
 
         // Custom Top Title Bar with Centralized Dock and Navigation
         appTitleBar = new AppTitleBar(stage, "Início",
@@ -70,7 +70,7 @@ public class SlideMdApp extends Application {
         mainContainer.setTop(appTitleBar);
 
         rootLayout = new StackPane();
-        rootLayout.setStyle("-fx-background-color: #000000;");
+        rootLayout.setStyle("-fx-background-color: #101010;");
         mainContainer.setCenter(rootLayout);
 
         // Slide Container with Click Navigation (left half = back, right half = next)
