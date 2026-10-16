@@ -20,13 +20,12 @@ public class HUDOverlay extends HBox {
     private final Button nextBtn;
     private final Button editorBtn;
     private final Button openBtn;
-    private final Button fullscreenBtn;
 
     private final PauseTransition hideTimer;
 
-    public HUDOverlay(Runnable onPrev, Runnable onNext, Runnable onToggleEditor, Runnable onOpenFile, Runnable onToggleFullscreen) {
+    public HUDOverlay(Runnable onPrev, Runnable onNext, Runnable onToggleEditor, Runnable onOpenFile) {
         setAlignment(Pos.CENTER);
-        setSpacing(12);
+        setSpacing(14);
         setPadding(new Insets(6, 18, 6, 18));
 
         // Ensure HUD stays as a compact floating card at bottom-center (never stretch vertically)
@@ -46,10 +45,9 @@ public class HUDOverlay extends HBox {
         nextBtn = createIconButton("›", "#38bdf8", 20, "Próximo Slide (Seta Direita)", onNext);
         editorBtn = createIconButton("MD", "#a78bfa", 12.5, "Editor Markdown Flutuante (M)", onToggleEditor);
         openBtn = createIconButton("📂", "#fbbf24", 15, "Abrir Arquivo Markdown (Ctrl+O)", onOpenFile);
-        fullscreenBtn = createIconButton("⛶", "#f1f5f9", 14, "Tela Cheia (F / F11)", onToggleFullscreen);
 
-        // Card contains strictly the modern action buttons
-        getChildren().addAll(prevBtn, nextBtn, editorBtn, openBtn, fullscreenBtn);
+        // Card contains strictly the action buttons
+        getChildren().addAll(prevBtn, nextBtn, editorBtn, openBtn);
 
         // Auto-hide timer
         hideTimer = new PauseTransition(Duration.seconds(2.5));

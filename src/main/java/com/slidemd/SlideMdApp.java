@@ -18,6 +18,7 @@ import javafx.scene.Scene;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
@@ -104,11 +105,12 @@ public class SlideMdApp extends Application {
     public void start(Stage stage) {
         this.primaryStage = stage;
         stage.initStyle(StageStyle.UNDECORATED);
+        stage.setFullScreenExitHint("");
 
         BorderPane mainContainer = new BorderPane();
         mainContainer.setStyle("-fx-background-color: #000000;");
 
-        // Custom Top Title Bar with #2d2d2d dark theme
+        // Custom Top Title Bar with Spotify-style #2d2d2d dark theme
         appTitleBar = new AppTitleBar(stage, "slide-md");
         mainContainer.setTop(appTitleBar);
 
@@ -124,8 +126,8 @@ public class SlideMdApp extends Application {
         floatingEditor = new FloatingEditorWindow(this::onEditorContentChanged, this::toggleEditor);
         StackPane.setAlignment(floatingEditor, Pos.CENTER);
 
-        // Setup Minimal HUD
-        hudOverlay = new HUDOverlay(this::prevSlide, this::nextSlide, this::toggleEditor, this::openFileDialog, this::toggleFullscreen);
+        // Setup Minimal HUD (fullscreen button moved to top bar expander)
+        hudOverlay = new HUDOverlay(this::prevSlide, this::nextSlide, this::toggleEditor, this::openFileDialog);
         StackPane.setAlignment(hudOverlay, Pos.BOTTOM_CENTER);
         StackPane.setMargin(hudOverlay, new Insets(0, 0, 28, 0));
 
@@ -141,6 +143,23 @@ public class SlideMdApp extends Application {
         stage.fullScreenProperty().addListener((obs, oldVal, isFull) -> {
             appTitleBar.setVisible(!isFull);
             appTitleBar.setManaged(!isFull);
+        });
+
+        // In full screen, reveal title bar if mouse hovers at the top edge
+        scene.addEventFilter(MouseEvent.MOUSE_MOVED, e -> {
+            if (stage.isFullScreen()) {
+                if (e.getY() <= 40) {
+                    if (!appTitleBar.isVisible()) {
+                        appTitleBar.setVisible(true);
+                        appTitleBar.setManaged(true);
+                    }
+                } else if (e.getY() > 65) {
+                    if (appTitleBar.isVisible()) {
+                        appTitleBar.setVisible(false);
+                        appTitleBar.setManaged(false);
+                    }
+                }
+            }
         });
 
         stage.setTitle("slide-md");

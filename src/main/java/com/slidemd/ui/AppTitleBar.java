@@ -4,6 +4,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -26,7 +27,7 @@ public class AppTitleBar extends HBox {
         setMaxHeight(34);
         setPadding(new Insets(0, 0, 0, 12));
 
-        // Background #2d2d2d as requested by user
+        // Spotify-style dark background #2d2d2d
         setStyle("-fx-background-color: #2d2d2d;" +
                  "-fx-border-color: transparent transparent rgba(255, 255, 255, 0.08) transparent;" +
                  "-fx-border-width: 1px;");
@@ -48,45 +49,45 @@ public class AppTitleBar extends HBox {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // 2. Window Control Buttons (Minimize, Maximize, Close)
-        Button minimizeBtn = createWindowButton("—", false, () -> stage.setIconified(true));
-        maxRestoreBtn = createWindowButton("□", false, () -> {
-            stage.setMaximized(!stage.isMaximized());
-            updateMaxRestoreIcon(stage.isMaximized());
+        // 2. Window Control Buttons (Minimize, Expand to Fullscreen, Close)
+        Button minimizeBtn = createWindowButton("—", false, "Minimizar", () -> stage.setIconified(true));
+        maxRestoreBtn = createWindowButton("□", false, "Expandir para Tela Cheia (F11)", () -> {
+            stage.setFullScreen(!stage.isFullScreen());
         });
-        Button closeBtn = createWindowButton("✕", true, stage::close);
+        Button closeBtn = createWindowButton("✕", true, "Fechar", stage::close);
 
         HBox controls = new HBox(minimizeBtn, maxRestoreBtn, closeBtn);
         controls.setAlignment(Pos.CENTER_RIGHT);
 
         getChildren().addAll(logoLabel, separator, titleLabel, spacer, controls);
 
-        // Window dragging logic
+        // Window dragging logic (only when not fullscreen)
         setOnMousePressed(e -> {
-            dragOffsetX = e.getScreenX() - stage.getX();
-            dragOffsetY = e.getScreenY() - stage.getY();
+            if (!stage.isFullScreen()) {
+                dragOffsetX = e.getScreenX() - stage.getX();
+                dragOffsetY = e.getScreenY() - stage.getY();
+            }
         });
 
         setOnMouseDragged(e -> {
-            if (!stage.isMaximized() && !stage.isFullScreen()) {
+            if (!stage.isFullScreen()) {
                 stage.setX(e.getScreenX() - dragOffsetX);
                 stage.setY(e.getScreenY() - dragOffsetY);
             }
         });
 
-        // Double click to maximize / restore
+        // Double click to expand to fullscreen / restore
         setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) {
-                stage.setMaximized(!stage.isMaximized());
-                updateMaxRestoreIcon(stage.isMaximized());
+                stage.setFullScreen(!stage.isFullScreen());
             }
         });
 
-        // Listen for maximize state changes
-        stage.maximizedProperty().addListener((obs, oldVal, isMax) -> updateMaxRestoreIcon(isMax));
+        // Listen for fullscreen state changes to update the icon
+        stage.fullScreenProperty().addListener((obs, oldVal, isFull) -> updateMaxRestoreIcon(isFull));
     }
 
-    private Button createWindowButton(String text, boolean isClose, Runnable action) {
+    private Button createWindowButton(String text, boolean isClose, String tooltipText, Runnable action) {
         Button btn = new Button(text);
         btn.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 11));
         btn.setPrefWidth(44);
@@ -112,6 +113,10 @@ public class AppTitleBar extends HBox {
             if (action != null) action.run();
         });
 
+        if (tooltipText != null) {
+            Tooltip.install(btn, new Tooltip(tooltipText));
+        }
+
         return btn;
     }
 
@@ -119,7 +124,13 @@ public class AppTitleBar extends HBox {
         titleLabel.setText(title != null ? title : "Apresentação");
     }
 
-    private void updateMaxRestoreIcon(boolean isMaximized) {
-        maxRestoreBtn.setText(isMaximized ? "❐" : "□");
+    private void updateMaxRestoreIcon(boolean isFullScreen) {
+        if (isFullScreen) {
+            maxRestoreBtn.setText("❐");
+            Tooltip.install(maxRestoreBtn, new Tooltip("Sair da Tela Cheia (Esc / F11)"));
+        } else {
+            maxRestoreBtn.setText("□");
+            Tooltip.install(maxRestoreBtn, new Tooltip("Expandir para Tela Cheia (F11)"));
+        }
     }
 }
