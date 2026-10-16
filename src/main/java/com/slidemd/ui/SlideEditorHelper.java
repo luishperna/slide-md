@@ -6,10 +6,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Utilitários puros para manipulação de texto de slides no editor Markdown.
+ * Utilitários para identificação e manipulação de slides no editor Markdown.
+ * Alinhado rigorosamente com o algoritmo de parsing do MarkdownSlideParser.
  */
 public final class SlideEditorHelper {
 
+    private static final Pattern FRONTMATTER_PATTERN = Pattern.compile("^\\s*---\\r?\\n(.*?)\\r?\\n---\\r?\\n?", Pattern.DOTALL);
     private static final Pattern DELIMITER_PATTERN = Pattern.compile("(?m)^[ \\t]*---[ \\t]*$");
     private static final Pattern BG_PATTERN = Pattern.compile("(?m)^[ \\t]*bg:[ \\t]*(.*)$");
 
@@ -18,59 +20,82 @@ public final class SlideEditorHelper {
     /**
      * Intervalo de um slide no texto do documento (início e fim, inclusive/exclusive).
      */
-    public record SlideRange(int startIndex, int endIndex, int slideNumber) {}
+    public record SlideRange(int startIndex, int endIndex, int slideIndex) {}
 
     /**
-     * Localiza todos os intervalos de slides delimitados por '---'.
+     * Localiza todos os intervalos de slides no documento Markdown.
+     * Trata o frontmatter global como parte do primeiro slide (slide 0) para sincronização perfeita.
      */
     public static List<SlideRange> findSlideRanges(String text) {
         List<SlideRange> ranges = new ArrayList<>();
-        if (text == null || text.isEmpty()) {
-            ranges.add(new SlideRange(0, 0, 1));
+        if (text == null || text.isBlank()) {
+            ranges.add(new SlideRange(0, 0, 0));
             return ranges;
         }
 
-        Matcher matcher = DELIMITER_PATTERN.matcher(text);
+        int contentStart = 0;
+        Matcher fmM = FRONTMATTER_PATTERN.matcher(text);
+        if (fmM.find()) {
+            contentStart = fmM.end();
+        }
+
+        String remaining = text.substring(contentStart);
+        Matcher matcher = DELIMITER_PATTERN.matcher(remaining);
+
         int prevEnd = 0;
-        int slideNumber = 1;
+        int slideIndex = 0;
 
         while (matcher.find()) {
             int delimiterStart = matcher.start();
-            ranges.add(new SlideRange(prevEnd, delimiterStart, slideNumber++));
+            int startInDoc = (slideIndex == 0) ? 0 : (contentStart + prevEnd);
+            int endInDoc = contentStart + delimiterStart;
+
+            ranges.add(new SlideRange(startInDoc, endInDoc, slideIndex++));
+
             prevEnd = matcher.end();
-            // Pula a quebra de linha após o delimitador se houver
-            if (prevEnd < text.length() && text.charAt(prevEnd) == '\r') prevEnd++;
-            if (prevEnd < text.length() && text.charAt(prevEnd) == '\n') prevEnd++;
+            if (prevEnd < remaining.length() && remaining.charAt(prevEnd) == '\r') prevEnd++;
+            if (prevEnd < remaining.length() && remaining.charAt(prevEnd) == '\n') prevEnd++;
         }
 
-        ranges.add(new SlideRange(prevEnd, text.length(), slideNumber));
+        int lastStart = (slideIndex == 0) ? 0 : (contentStart + prevEnd);
+        ranges.add(new SlideRange(lastStart, text.length(), slideIndex));
+
         return ranges;
     }
 
     /**
-     * Identifica o índice do slide onde o cursor está localizado.
+     * Identifica o índice do slide (0-based) onde o cursor está localizado.
      */
     public static int getSlideIndexAtCaret(String text, int caret) {
         List<SlideRange> ranges = findSlideRanges(text);
         int clampedCaret = Math.max(0, Math.min(caret, text != null ? text.length() : 0));
-        for (int i = 0; i < ranges.size(); i++) {
-            SlideRange range = ranges.get(i);
+        for (SlideRange range : ranges) {
             if (clampedCaret >= range.startIndex && clampedCaret <= range.endIndex) {
-                return i;
+                return range.slideIndex;
             }
         }
         return Math.max(0, ranges.size() - 1);
     }
 
     /**
-     * Retorna a posição do caractere onde o slide indicado inicia.
+     * Retorna a posição do caractere no texto onde o conteúdo do slide indicado inicia.
      */
     public static int getSlideStartCaret(String text, int slideIndex) {
+        if (text == null || text.isBlank()) return 0;
         List<SlideRange> ranges = findSlideRanges(text);
         if (ranges.isEmpty()) return 0;
-        if (slideIndex <= 0) return 0;
-        if (slideIndex >= ranges.size()) return ranges.get(ranges.size() - 1).startIndex();
-        return ranges.get(slideIndex).startIndex();
+        if (slideIndex <= 0) {
+            // Se houver frontmatter global no slide 0, posiciona no início do conteúdo real do slide
+            Matcher fmM = FRONTMATTER_PATTERN.matcher(text);
+            if (fmM.find()) {
+                return fmM.end();
+            }
+            return 0;
+        }
+
+        int target = Math.min(slideIndex, ranges.size() - 1);
+        SlideRange r = ranges.get(target);
+        return r.startIndex;
     }
 
     /**
@@ -125,11 +150,7 @@ public final class SlideEditorHelper {
         StringBuilder sb = new StringBuilder(prefix);
         sb.append("\n\n---\n\n# Novo Slide\n\n");
         if (!suffix.isEmpty()) {
-            if (suffix.startsWith("---")) {
-                sb.append(suffix);
-            } else {
-                sb.append(suffix);
-            }
+            sb.append(suffix);
         }
         return sb.toString();
     }
@@ -152,13 +173,10 @@ public final class SlideEditorHelper {
 
         String updatedSlideText;
         if (bgMatcher.find()) {
-            // Atualiza bg existente
             updatedSlideText = bgMatcher.replaceFirst("bg: " + bgValue);
         } else {
-            // Adiciona bg no início do slide
             String trimmed = currentSlideText.stripLeading();
             if (trimmed.startsWith("---")) {
-                // Já tem delimitador local
                 updatedSlideText = "\nbg: " + bgValue + "\n" + trimmed;
             } else {
                 updatedSlideText = "bg: " + bgValue + "\n" + currentSlideText;

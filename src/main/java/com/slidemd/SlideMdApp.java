@@ -226,10 +226,6 @@ public class SlideMdApp extends Application {
 
         appTitleBar.updateCounter(index, currentDeck.getSlideCount());
 
-        if (floatingEditor != null && floatingEditor.isVisible()) {
-            floatingEditor.scrollToSlide(index);
-        }
-
         if (!animated || currentSlideView == null) {
             if (currentSlideView != null) {
                 currentSlideView.onSlideLeave();
@@ -250,32 +246,46 @@ public class SlideMdApp extends Application {
 
     public void nextSlide() {
         if (transitionManager.isAnimating()) return;
-        if (currentSlideIndex < currentDeck.getSlideCount() - 1) {
+        if (currentDeck != null && currentSlideIndex < currentDeck.getSlideCount() - 1) {
             currentSlideIndex++;
             displaySlide(currentSlideIndex, true, true);
+            if (floatingEditor != null && floatingEditor.isVisible()) {
+                floatingEditor.scrollToSlide(currentSlideIndex);
+            }
         }
     }
 
     public void prevSlide() {
         if (transitionManager.isAnimating()) return;
-        if (currentSlideIndex > 0) {
+        if (currentDeck != null && currentSlideIndex > 0) {
             currentSlideIndex--;
             displaySlide(currentSlideIndex, true, false);
+            if (floatingEditor != null && floatingEditor.isVisible()) {
+                floatingEditor.scrollToSlide(currentSlideIndex);
+            }
         }
     }
 
     public void firstSlide() {
+        if (currentDeck == null || currentDeck.getSlideCount() == 0) return;
         if (currentSlideIndex != 0) {
             currentSlideIndex = 0;
             displaySlide(currentSlideIndex, true, false);
+            if (floatingEditor != null && floatingEditor.isVisible()) {
+                floatingEditor.scrollToSlide(currentSlideIndex);
+            }
         }
     }
 
     public void lastSlide() {
+        if (currentDeck == null || currentDeck.getSlideCount() == 0) return;
         int last = currentDeck.getSlideCount() - 1;
         if (currentSlideIndex != last) {
             currentSlideIndex = last;
             displaySlide(currentSlideIndex, true, true);
+            if (floatingEditor != null && floatingEditor.isVisible()) {
+                floatingEditor.scrollToSlide(currentSlideIndex);
+            }
         }
     }
 

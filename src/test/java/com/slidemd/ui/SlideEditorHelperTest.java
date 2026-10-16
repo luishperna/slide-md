@@ -89,4 +89,35 @@ class SlideEditorHelperTest {
         assertTrue(slide3Start > slide2Start);
         assertTrue(md.substring(slide3Start).stripLeading().startsWith("# Slide 3"));
     }
+
+    @Test
+    void testSlideRangesWithGlobalFrontmatter() {
+        String md = """
+                ---
+                bg: #090d16
+                transition: slide
+                ---
+
+                # Slide 1 (Apresentacao)
+                Conteudo do primeiro slide
+
+                ---
+
+                # Slide 2 (Segundo)
+                Conteudo do segundo slide
+                """;
+
+        List<SlideEditorHelper.SlideRange> ranges = SlideEditorHelper.findSlideRanges(md);
+        assertEquals(2, ranges.size());
+
+        // Caret in frontmatter belongs to Slide 0
+        assertEquals(0, SlideEditorHelper.getSlideIndexAtCaret(md, 10));
+        // Caret in Slide 1 body belongs to Slide 0
+        int slide1Body = md.indexOf("# Slide 1");
+        assertEquals(0, SlideEditorHelper.getSlideIndexAtCaret(md, slide1Body));
+
+        // Caret in Slide 2 body belongs to Slide 1
+        int slide2Body = md.indexOf("# Slide 2");
+        assertEquals(1, SlideEditorHelper.getSlideIndexAtCaret(md, slide2Body));
+    }
 }
