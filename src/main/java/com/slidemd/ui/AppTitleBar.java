@@ -1,6 +1,5 @@
 package com.slidemd.ui;
 
-import javafx.animation.FadeTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -15,7 +14,6 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 
 public class AppTitleBar extends HBox {
 
@@ -28,36 +26,48 @@ public class AppTitleBar extends HBox {
     private double dragOffsetX;
     private double dragOffsetY;
 
-    public AppTitleBar(Stage stage, String initialTitle) {
+    public AppTitleBar(Stage stage, String initialTitle, Runnable onNewFile, Runnable onOpenFile) {
         setAlignment(Pos.CENTER_LEFT);
         setPrefHeight(34);
         setMinHeight(34);
         setMaxHeight(34);
-        setPadding(new Insets(0, 0, 0, 14));
+        setPadding(new Insets(0, 0, 0, 12));
 
         // Antigravity dark theme: #161616
         setStyle("-fx-background-color: #161616;" +
                  "-fx-border-color: transparent transparent rgba(255, 255, 255, 0.06) transparent;" +
                  "-fx-border-width: 1px;");
 
-        // 1. App Logo / Name
+        // 1. App Logo
         Label logoLabel = new Label("⚡ slide-md");
         logoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12.5));
         logoLabel.setTextFill(Color.web("#38bdf8"));
 
+        // 2. Action buttons: Nova Apresentação e Abrir Existente
+        SVGPath newDocIcon = createNewDocIcon();
+        Button newBtn = createActionButton(newDocIcon, "Nova Apresentação (Ctrl+N)", onNewFile);
+
+        SVGPath folderIcon = createFolderIcon();
+        Button openBtn = createActionButton(folderIcon, "Abrir Apresentação Existente (Ctrl+O)", onOpenFile);
+
+        HBox actionGroup = new HBox(4, newBtn, openBtn);
+        actionGroup.setAlignment(Pos.CENTER_LEFT);
+        HBox.setMargin(actionGroup, new Insets(0, 8, 0, 10));
+
         Label separator = new Label("—");
         separator.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         separator.setTextFill(Color.web("#475569"));
-        HBox.setMargin(separator, new Insets(0, 8, 0, 8));
+        HBox.setMargin(separator, new Insets(0, 6, 0, 0));
 
         titleLabel = new Label(initialTitle != null ? initialTitle : "Apresentação");
         titleLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         titleLabel.setTextFill(Color.web("#94a3b8"));
+        HBox.setMargin(titleLabel, new Insets(0, 0, 0, 6));
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // 2. Vector SVG Icons matching Antigravity / Spotify sleek style
+        // 3. Vector SVG Window Controls (sempre visíveis)
         SVGPath minIcon = createMinIcon();
         maxIcon = createMaxIcon();
         restoreIcon = createRestoreIcon();
@@ -85,22 +95,9 @@ public class AppTitleBar extends HBox {
 
         controls = new HBox(minimizeBtn, maxRestoreBtn, closeBtn);
         controls.setAlignment(Pos.CENTER_RIGHT);
-        controls.setOpacity(0.0); // Hidden by default, shown when mouse enters title bar
+        controls.setOpacity(1.0); // Sempre visíveis conforme solicitado
 
-        getChildren().addAll(logoLabel, separator, titleLabel, spacer, controls);
-
-        // Show window control icons only when mouse is inside the title bar
-        setOnMouseEntered(e -> {
-            FadeTransition ft = new FadeTransition(Duration.millis(140), controls);
-            ft.setToValue(1.0);
-            ft.play();
-        });
-
-        setOnMouseExited(e -> {
-            FadeTransition ft = new FadeTransition(Duration.millis(180), controls);
-            ft.setToValue(0.0);
-            ft.play();
-        });
+        getChildren().addAll(logoLabel, actionGroup, separator, titleLabel, spacer, controls);
 
         // Window dragging logic (only when not fullscreen)
         setOnMousePressed(e -> {
@@ -126,6 +123,66 @@ public class AppTitleBar extends HBox {
 
         // Listen for fullscreen state changes to update the icon
         stage.fullScreenProperty().addListener((obs, oldVal, isFull) -> updateMaxRestoreIcon(isFull));
+    }
+
+    private SVGPath createNewDocIcon() {
+        SVGPath path = new SVGPath();
+        path.setContent("M 2 1.5 L 7 1.5 L 10 4.5 L 10 11.5 L 2 11.5 Z M 7 1.5 L 7 4.5 L 10 4.5 M 4 8 L 8 8 M 6 6 L 6 10");
+        path.setStroke(Color.web("#94a3b8"));
+        path.setStrokeWidth(1.15);
+        path.setStrokeLineCap(StrokeLineCap.ROUND);
+        path.setFill(Color.TRANSPARENT);
+        return path;
+    }
+
+    private SVGPath createFolderIcon() {
+        SVGPath path = new SVGPath();
+        path.setContent("M 1.5 2.5 L 4.5 2.5 L 6 4 L 11.5 4 L 11.5 11 L 1.5 11 Z");
+        path.setStroke(Color.web("#94a3b8"));
+        path.setStrokeWidth(1.15);
+        path.setStrokeLineCap(StrokeLineCap.ROUND);
+        path.setFill(Color.TRANSPARENT);
+        return path;
+    }
+
+    private Button createActionButton(SVGPath icon, String tooltipText, Runnable action) {
+        Button btn = new Button();
+        btn.setGraphic(icon);
+        btn.setPrefWidth(28);
+        btn.setPrefHeight(26);
+        btn.setMinHeight(26);
+        btn.setMaxHeight(26);
+        btn.setAlignment(Pos.CENTER);
+
+        String baseStyle = "-fx-background-color: transparent;" +
+                           "-fx-background-radius: 4px;" +
+                           "-fx-cursor: hand;" +
+                           "-fx-padding: 0;";
+
+        String hoverStyle = "-fx-background-color: #262626;" +
+                            "-fx-background-radius: 4px;" +
+                            "-fx-cursor: hand;" +
+                            "-fx-padding: 0;";
+
+        btn.setStyle(baseStyle);
+        btn.setOnMouseEntered(e -> {
+            btn.setStyle(hoverStyle);
+            icon.setStroke(Color.WHITE);
+        });
+        btn.setOnMouseExited(e -> {
+            btn.setStyle(baseStyle);
+            icon.setStroke(Color.web("#94a3b8"));
+        });
+
+        btn.setOnAction(e -> {
+            if (action != null) action.run();
+        });
+
+        if (tooltipText != null) {
+            Tooltip.install(btn, new Tooltip(tooltipText));
+        }
+
+        return btn;
     }
 
     private SVGPath createMinIcon() {

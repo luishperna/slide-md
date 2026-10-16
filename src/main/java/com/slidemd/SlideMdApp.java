@@ -110,8 +110,8 @@ public class SlideMdApp extends Application {
         BorderPane mainContainer = new BorderPane();
         mainContainer.setStyle("-fx-background-color: #000000;");
 
-        // Custom Top Title Bar with Spotify-style #2d2d2d dark theme
-        appTitleBar = new AppTitleBar(stage, "slide-md");
+        // Custom Top Title Bar with Antigravity-style #161616 dark theme
+        appTitleBar = new AppTitleBar(stage, "slide-md", this::createNewPresentation, this::openFileDialog);
         mainContainer.setTop(appTitleBar);
 
         rootLayout = new StackPane();
@@ -316,6 +316,63 @@ public class SlideMdApp extends Application {
         }
     }
 
+    public void createNewPresentation() {
+        String newTemplate = """
+                ---
+                bg: linear-gradient(to bottom right, #090d16, #1e293b)
+                align: center
+                transition: morph
+                ---
+
+                # Nova Apresentação
+                Edite seu conteúdo em tempo real
+
+                Pressione **M** para abrir o editor
+
+                ---
+                bg: #0f172a
+                align: left
+
+                ## Tópicos Principais
+                - Primeiro ponto importante
+                - Segundo ponto importante
+                """;
+        this.loadedFile = null;
+        this.currentDeck = parser.parseContent(newTemplate);
+        primaryStage.setTitle("slide-md — Nova Apresentação");
+        if (appTitleBar != null) {
+            appTitleBar.setTitle("Nova Apresentação");
+        }
+        floatingEditor.setMarkdownContent(newTemplate);
+        currentSlideIndex = 0;
+        displaySlide(0, false, true);
+        floatingEditor.showWindow();
+    }
+
+    public void savePresentation() {
+        if (loadedFile != null && loadedFile.exists()) {
+            try {
+                Files.writeString(loadedFile.toPath(), floatingEditor.getMarkdownContent(), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                LOGGER.warning("Erro ao salvar arquivo: " + e.getMessage());
+            }
+        } else {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Salvar Apresentação Markdown");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Arquivo Markdown (*.md)", "*.md"));
+            fileChooser.setInitialFileName("apresentacao.md");
+            File file = fileChooser.showSaveDialog(primaryStage);
+            if (file != null) {
+                try {
+                    Files.writeString(file.toPath(), floatingEditor.getMarkdownContent(), StandardCharsets.UTF_8);
+                    loadFile(file);
+                } catch (IOException e) {
+                    LOGGER.severe("Erro ao salvar novo arquivo: " + e.getMessage());
+                }
+            }
+        }
+    }
+
     public void openFileDialog() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Abrir Apresentação Markdown");
@@ -363,7 +420,17 @@ public class SlideMdApp extends Application {
 
     private void setupKeyHandlers(Scene scene) {
         scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-            // Global Open File shortcut (Ctrl+O on Windows/Linux, Cmd+O on Mac)
+            // Global shortcuts: Nova (Ctrl+N), Salvar (Ctrl+S), Abrir (Ctrl+O)
+            if (event.isShortcutDown() && event.getCode() == KeyCode.N) {
+                createNewPresentation();
+                event.consume();
+                return;
+            }
+            if (event.isShortcutDown() && event.getCode() == KeyCode.S) {
+                savePresentation();
+                event.consume();
+                return;
+            }
             if (event.isShortcutDown() && event.getCode() == KeyCode.O) {
                 openFileDialog();
                 event.consume();
