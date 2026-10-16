@@ -67,23 +67,16 @@ public class AppTitleBar extends HBox {
         Region leftSpacer = new Region();
         HBox.setHgrow(leftSpacer, Priority.ALWAYS);
 
-        // 2. Center Section: Centralized Modern Action & Navigation Dock
-        HBox centerDock = new HBox(6);
-        centerDock.setAlignment(Pos.CENTER);
-        centerDock.setPadding(new Insets(3, 10, 3, 10));
-        centerDock.setStyle("-fx-background-color: #1f1f1f;" +
-                            "-fx-background-radius: 20px;" +
-                            "-fx-border-color: rgba(255, 255, 255, 0.1);" +
-                            "-fx-border-radius: 20px;" +
-                            "-fx-border-width: 1px;" +
-                            "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 10, 0, 0, 2);");
+        // 2. Center Section: Direct Modern Action & Navigation Icons
+        HBox centerGroup = new HBox(8);
+        centerGroup.setAlignment(Pos.CENTER);
 
         Button newBtn = createDockButton(createNewDocIcon(), "Nova Apresentação (Ctrl+N)", onNewFile);
         Button openBtn = createDockButton(createFolderIcon(), "Abrir Apresentação Existente (Ctrl+O)", onOpenFile);
         Button editorBtn = createDockButton(createEditorIcon(), "Editor Markdown (M / E)", onToggleEditor);
 
         Label dockDivider = new Label("|");
-        dockDivider.setTextFill(Color.web("#475569"));
+        dockDivider.setTextFill(Color.web("#334155"));
         dockDivider.setFont(Font.font("Segoe UI", 12));
         HBox.setMargin(dockDivider, new Insets(0, 4, 0, 4));
 
@@ -103,7 +96,7 @@ public class AppTitleBar extends HBox {
         navGroup.setVisible(false);
         navGroup.setManaged(false);
 
-        centerDock.getChildren().addAll(newBtn, openBtn, editorBtn, navGroup);
+        centerGroup.getChildren().addAll(newBtn, openBtn, editorBtn, navGroup);
 
         Region rightSpacer = new Region();
         HBox.setHgrow(rightSpacer, Priority.ALWAYS);
@@ -136,7 +129,7 @@ public class AppTitleBar extends HBox {
         HBox controls = new HBox(minimizeBtn, maxRestoreBtn, closeBtn);
         controls.setAlignment(Pos.CENTER_RIGHT);
 
-        getChildren().addAll(leftBox, leftSpacer, centerDock, rightSpacer, controls);
+        getChildren().addAll(leftBox, leftSpacer, centerGroup, rightSpacer, controls);
 
         // Window dragging logic (only when not fullscreen)
         setOnMousePressed(e -> {
