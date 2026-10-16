@@ -4,9 +4,11 @@ import com.slidemd.animation.TransitionManager;
 import com.slidemd.model.Slide;
 import com.slidemd.model.SlideDeck;
 import com.slidemd.parser.MarkdownSlideParser;
+import com.slidemd.ui.AppTitleBar;
 import com.slidemd.ui.FloatingEditorWindow;
 import com.slidemd.ui.HUDOverlay;
 import com.slidemd.ui.SlideView;
+import com.slidemd.ui.WindowResizeHelper;
 import com.slidemd.video.FFmpegService;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -17,9 +19,11 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,6 +41,7 @@ public class SlideMdApp extends Application {
     private final TransitionManager transitionManager = new TransitionManager();
 
     private Stage primaryStage;
+    private AppTitleBar appTitleBar;
     private StackPane rootLayout;
     private StackPane slideContainer;
     private HUDOverlay hudOverlay;
@@ -98,9 +103,18 @@ public class SlideMdApp extends Application {
     @Override
     public void start(Stage stage) {
         this.primaryStage = stage;
+        stage.initStyle(StageStyle.UNDECORATED);
+
+        BorderPane mainContainer = new BorderPane();
+        mainContainer.setStyle("-fx-background-color: #000000;");
+
+        // Custom Top Title Bar with #2d2d2d dark theme
+        appTitleBar = new AppTitleBar(stage, "slide-md");
+        mainContainer.setTop(appTitleBar);
 
         rootLayout = new StackPane();
         rootLayout.setStyle("-fx-background-color: #000000;");
+        mainContainer.setCenter(rootLayout);
 
         slideContainer = new StackPane();
         slideContainer.setAlignment(Pos.CENTER);
@@ -117,10 +131,17 @@ public class SlideMdApp extends Application {
 
         rootLayout.getChildren().addAll(hudOverlay, floatingEditor);
 
-        Scene scene = new Scene(rootLayout, 1280, 720);
+        Scene scene = new Scene(mainContainer, 1280, 720);
         setupKeyHandlers(scene);
         setupDragAndDrop(scene);
         hudOverlay.bindSceneActivity(scene);
+        WindowResizeHelper.addResizeListener(stage, scene);
+
+        // Hide title bar when entering full screen, show when windowed
+        stage.fullScreenProperty().addListener((obs, oldVal, isFull) -> {
+            appTitleBar.setVisible(!isFull);
+            appTitleBar.setManaged(!isFull);
+        });
 
         stage.setTitle("slide-md");
         stage.setScene(scene);
@@ -157,6 +178,9 @@ public class SlideMdApp extends Application {
             this.loadedFile = file;
             this.currentDeck = parser.parseFile(file);
             primaryStage.setTitle("slide-md — " + currentDeck.getTitle());
+            if (appTitleBar != null) {
+                appTitleBar.setTitle(currentDeck.getTitle());
+            }
             floatingEditor.setMarkdownContent(Files.readString(file.toPath(), StandardCharsets.UTF_8));
             currentSlideIndex = 0;
             displaySlide(currentSlideIndex, false, true);
@@ -169,6 +193,9 @@ public class SlideMdApp extends Application {
     private void loadDefaultDeck() {
         this.currentDeck = parser.parseContent(DEFAULT_PRESENTATION);
         primaryStage.setTitle("slide-md — Apresentação Demonstrativa");
+        if (appTitleBar != null) {
+            appTitleBar.setTitle("Apresentação Demonstrativa");
+        }
         floatingEditor.setMarkdownContent(DEFAULT_PRESENTATION);
         currentSlideIndex = 0;
         displaySlide(currentSlideIndex, false, true);

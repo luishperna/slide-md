@@ -51,7 +51,7 @@ public class FloatingEditorWindow extends VBox {
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(10, 14, 10, 16));
-        header.setStyle("-fx-background-color: rgba(30, 41, 59, 0.8);" +
+        header.setStyle("-fx-background-color: #2d2d2d;" +
                         "-fx-background-radius: 14px 14px 0 0;" +
                         "-fx-border-color: transparent transparent rgba(255, 255, 255, 0.08) transparent;");
 
