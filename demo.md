@@ -1,7 +1,11 @@
 ---
 bg: linear-gradient(to bottom right, #090d16, #1e293b)
 align: center
-transition: slide
+transition: morph
+
+slide 2:
+  bg: #0f172a
+  align: left
 ---
 
 # slide-md
@@ -9,10 +13,6 @@ transition: slide
 
 Pressione **Espaço** ou **Seta Direita** para navegar
 
----
-bg: #0f172a
-align: left
-transition: slide
 ---
 
 # Atalhos de Teclado
@@ -22,6 +22,7 @@ Navegação simples e sem distrações:
 - **Seta Direita / Espaço / Page Down**: Próximo slide
 - **Seta Esquerda / Page Up**: Slide anterior
 - **M ou E**: Abrir/fechar **Editor Flutuante** de Markdown
+- **Ctrl + O**: Abrir apresentação visualmente
 - **F ou F11**: Alternar **Tela Cheia**
 - **R**: Recarregar arquivo do disco
 - **Esc**: Fechar editor ou sair da tela cheia
@@ -29,8 +30,18 @@ Navegação simples e sem distrações:
 ---
 bg: #1e1e2e
 align: center
-transition: fade
+
+# Modo Transformar (Morph) 🪄
+
+Os elementos da tela entram e saem com fluidez cinematográfica:
+
+- Cada título, texto e item de lista se move de forma escalonada
+- Sensação idêntica ao recurso **Transformar do PowerPoint**
+- Transição ativada globalmente com `transition: morph`!
+
 ---
+bg: #042f2e
+align: left
 
 # Estilização com Markdown
 
@@ -42,39 +53,19 @@ Você pode usar:
 - Blocos de código destacados
 
 ```java
-// Performance em 60 FPS com aceleração por hardware
-SlideView slide = new SlideView(markdownContent);
-slide.renderWithFluidTransitions();
+// Efeito Transformar ativo em 60 FPS com aceleração por GPU
+transitionManager.transition(container, oldView, nextView, true, "morph", () -> {});
 ```
-
----
-bg: #042f2e
-align: left
-transition: zoom
----
-
-# Suporte a Cores e Fundos
-
-Você pode personalizar cada slide individualmente através do cabeçalho:
-
-`bg: #042f2e`
-`align: left`
-`transition: zoom`
-
-Também é possível usar gradientes CSS ou imagens de fundo:
-`bg: url(./minha-imagem.jpg)`
 
 ---
 bg: #111827
 align: center
-transition: slide
----
 
-# Recursos de Vídeo & FFmpeg
+# Suporte a Vídeo 100% Nativo em Java
 
-Edite vídeos diretamente no Markdown sem esforço:
+Sem precisar instalar FFmpeg ou ferramentas externas:
 
-`video: ./meu-video.mp4`
-`cut: 00:10 - 00:45`
-
-O **slide-md** executa o corte instantâneo via FFmpeg sem reprocessar áudio/vídeo e armazena em cache local para máxima velocidade!
+- O JavaFX reproduz vídeos MP4/H.264 com aceleração por hardware
+- **Corte virtual instantâneo (0ms)**:
+  `cut: 00:10 - 00:45`
+- Zero espera de processamento e zero gasto de espaço extra em disco!

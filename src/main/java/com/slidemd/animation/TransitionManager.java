@@ -42,8 +42,99 @@ public class TransitionManager {
         switch (transitionType) {
             case "fade" -> executeFadeTransition(container, outgoing, incoming, onFinished);
             case "zoom" -> executeZoomTransition(container, outgoing, incoming, forward, onFinished);
+            case "morph", "transform", "transformar" -> executeMorphTransition(container, outgoing, incoming, forward, onFinished);
             default -> executeSlideTransition(container, outgoing, incoming, width, direction, onFinished);
         }
+    }
+
+    private void executeMorphTransition(Pane container, SlideView outgoing, SlideView incoming, boolean forward, Runnable onFinished) {
+        if (!container.getChildren().contains(incoming)) {
+            container.getChildren().add(incoming);
+        }
+
+        incoming.setOpacity(0.0);
+        incoming.setTranslateX(0);
+        incoming.setTranslateY(0);
+
+        outgoing.setTranslateX(0);
+        outgoing.setTranslateY(0);
+
+        ParallelTransition pt = new ParallelTransition();
+
+        // 1. Outgoing slide: gentle upward or downward drift and fade out
+        FadeTransition outFade = new FadeTransition(Duration.millis(260), outgoing);
+        outFade.setToValue(0.0);
+        outFade.setInterpolator(FLUID_INTERPOLATOR);
+        pt.getChildren().add(outFade);
+
+        if (outgoing.getContentBox() != null) {
+            double outY = forward ? -40.0 : 40.0;
+            TranslateTransition outSlide = new TranslateTransition(Duration.millis(260), outgoing.getContentBox());
+            outSlide.setToY(outY);
+            outSlide.setInterpolator(FLUID_INTERPOLATOR);
+            pt.getChildren().add(outSlide);
+        }
+
+        // 2. Incoming slide background crossfade
+        FadeTransition inFade = new FadeTransition(Duration.millis(320), incoming);
+        inFade.setToValue(1.0);
+        inFade.setInterpolator(FLUID_INTERPOLATOR);
+        pt.getChildren().add(inFade);
+
+        // 3. Staggered cascade entrance for incoming slide elements (PowerPoint Morph effect)
+        if (incoming.getContentBox() != null) {
+            var children = incoming.getContentBox().getChildren();
+            double inStartY = forward ? 45.0 : -45.0;
+            incoming.getContentBox().setTranslateY(0);
+
+            for (int i = 0; i < children.size(); i++) {
+                javafx.scene.Node node = children.get(i);
+                node.setTranslateY(inStartY);
+                node.setOpacity(0.0);
+                node.setScaleX(0.95);
+                node.setScaleY(0.95);
+
+                Duration delay = Duration.millis(Math.min(i * 45, 180));
+
+                TranslateTransition tt = new TranslateTransition(Duration.millis(380), node);
+                tt.setToY(0);
+                tt.setInterpolator(FLUID_INTERPOLATOR);
+                tt.setDelay(delay);
+
+                FadeTransition ft = new FadeTransition(Duration.millis(320), node);
+                ft.setToValue(1.0);
+                ft.setInterpolator(FLUID_INTERPOLATOR);
+                ft.setDelay(delay);
+
+                ScaleTransition st = new ScaleTransition(Duration.millis(380), node);
+                st.setToX(1.0);
+                st.setToY(1.0);
+                st.setInterpolator(FLUID_INTERPOLATOR);
+                st.setDelay(delay);
+
+                pt.getChildren().addAll(tt, ft, st);
+            }
+        }
+
+        pt.setOnFinished(e -> {
+            container.getChildren().remove(outgoing);
+            outgoing.setOpacity(1.0);
+            if (outgoing.getContentBox() != null) {
+                outgoing.getContentBox().setTranslateY(0);
+            }
+            if (incoming.getContentBox() != null) {
+                for (javafx.scene.Node node : incoming.getContentBox().getChildren()) {
+                    node.setTranslateY(0);
+                    node.setOpacity(1.0);
+                    node.setScaleX(1.0);
+                    node.setScaleY(1.0);
+                }
+            }
+            incoming.onSlideEnter();
+            isAnimating = false;
+            if (onFinished != null) onFinished.run();
+        });
+        pt.play();
     }
 
     private void executeSlideTransition(Pane container, SlideView outgoing, SlideView incoming, double width, double direction, Runnable onFinished) {

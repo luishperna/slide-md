@@ -7,17 +7,19 @@ import java.util.List;
 public class Slide {
     private final int index;
     private final String rawMarkdown;
+    private String contentMarkdown;
     private String title;
     private String backgroundColor;
     private String backgroundImage;
     private Alignment alignment = Alignment.CENTER;
-    private String transition = "slide"; // slide, fade, zoom
+    private String transition = "slide"; // slide, fade, zoom, morph
     private VideoSpec videoSpec;
     private final List<String> notes = new ArrayList<>();
 
     public Slide(int index, String rawMarkdown) {
         this.index = index;
         this.rawMarkdown = rawMarkdown;
+        this.contentMarkdown = rawMarkdown;
     }
 
     public int getIndex() {
@@ -26,6 +28,14 @@ public class Slide {
 
     public String getRawMarkdown() {
         return rawMarkdown;
+    }
+
+    public String getContentMarkdown() {
+        return contentMarkdown != null ? contentMarkdown : rawMarkdown;
+    }
+
+    public void setContentMarkdown(String contentMarkdown) {
+        this.contentMarkdown = contentMarkdown;
     }
 
     public String getTitle() {

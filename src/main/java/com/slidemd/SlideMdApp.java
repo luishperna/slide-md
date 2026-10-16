@@ -51,60 +51,48 @@ public class SlideMdApp extends Application {
             ---
             bg: linear-gradient(to bottom right, #090d16, #1e293b)
             align: center
-            transition: slide
+            transition: morph
+
+            slide 2:
+              bg: #0f172a
+              align: left
             ---
-            
+
             # slide-md
             Apresentações Modernas e Rápidas em Java através de Markdown
-            
-            Pressione **Espaço** ou **Seta Direita** para avançar
-            
+
+            Pressione **Espaço** ou **Seta Direita** para navegar
+
             ---
-            bg: #0f172a
-            align: left
-            transition: slide
-            ---
-            
+
             # Recursos Principais
-            
+
             - **Ultra Rápido & Performático**: Renderização nativa em JavaFX a 60 FPS
-            - **Transições Fluidas**: Animações suaves entre slides
+            - **Modo Transformar (Morph)**: Elementos se movem com suavidade entre os slides
             - **Editor Flutuante**: Pressione `M` ou clique em `MD` para editar ao vivo
-            - **Edição de Vídeo**: Corte e junção instantâneos com FFmpeg
-            
-            ```markdown
+            - **Abertura Visual**: Botão `📂` ou arraste e solte arquivos `.md` na janela
+
             ---
             bg: #1e1e2e
             align: center
-            ---
-            # Meu Slide Incrível
-            ```
-            
-            ---
-            bg: #034f84
-            align: center
-            transition: fade
-            ---
-            
-            # Personalização Simples
-            
-            > "Apresentações bonitas não precisam ser difíceis de criar."
-            
-            Cores de fundo, gradientes, imagens e alinhamento flexível.
-            
+
+            # Transição Transformar 🪄
+
+            > "Elementos entram e saem da tela com animação escalonada."
+
+            Configure no início da apresentação com `transition: morph`.
+
             ---
             bg: #111827
             align: center
-            transition: zoom
-            ---
-            
-            # Suporte a Vídeo com FFmpeg
-            
-            Defina no topo do slide:
+
+            # Suporte a Vídeo Nativo
+
+            Defina no slide:
             `video: caminho/para/video.mp4`
             `cut: 00:05 - 00:25`
-            
-            O corte é feito sem re-encoding (instantâneo) e salvo em cache!
+
+            O corte virtual é feito nativamente em Java (0ms) sem exigir FFmpeg!
             """;
 
     @Override

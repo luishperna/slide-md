@@ -11,9 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,6 +20,7 @@ public class MarkdownSlideParser {
     private static final Pattern SLIDE_SEPARATOR = Pattern.compile("(?m)^\\s*---\\s*$");
     private static final Pattern HTML_COMMENT_DIRECTIVE = Pattern.compile("<!--\\s*([a-zA-Z0-9_-]+)\\s*:\\s*(.*?)\\s*-->");
     private static final Pattern FRONTMATTER_LINE = Pattern.compile("^([a-zA-Z0-9_-]+)\\s*:\\s*(.*)$");
+    private static final Pattern SLIDE_OVERRIDE_LINE = Pattern.compile("^(?:slide\\s+(\\d+)|\\[slide\\s+(\\d+)\\])\\s*:?\\s*(.*)$", Pattern.CASE_INSENSITIVE);
 
     private final Parser commonmarkParser;
 
@@ -48,23 +47,36 @@ public class MarkdownSlideParser {
             return deck;
         }
 
-        // Split into slides
-        String[] rawSlides = SLIDE_SEPARATOR.split(content);
-        int slideIndex = 0;
+        Map<String, String> globalDirectives = new HashMap<>();
+        Map<Integer, Map<String, String>> slideOverrides = new HashMap<>();
+        String remainingContent = content;
+
+        // Check if content begins with frontmatter (global presentation configuration)
+        // Format: ^\s*---\r?\n ... \r?\n---\r?\n?
+        Matcher fmM = Pattern.compile("^\\s*---\\r?\\n(.*?)\\r?\\n---\\r?\\n?", Pattern.DOTALL).matcher(content);
+        if (fmM.find()) {
+            String frontmatterText = fmM.group(1);
+            remainingContent = content.substring(fmM.end());
+            parseGlobalFrontmatter(frontmatterText, globalDirectives, slideOverrides);
+        }
+
+        // Split slides in remaining content by '---'
+        String[] rawSlides = SLIDE_SEPARATOR.split(remainingContent);
+        int slideNumber = 1;
 
         for (String raw : rawSlides) {
             String trimmed = raw.trim();
-            if (trimmed.isEmpty() && rawSlides.length > 1 && slideIndex == 0) {
-                // If the document begins with `---` delimiter, the first item is empty
+            if (trimmed.isEmpty()) {
                 continue;
             }
 
-            Slide slide = parseSlide(slideIndex++, trimmed);
+            Slide slide = parseSlideWithContext(slideNumber - 1, trimmed, globalDirectives, slideOverrides.get(slideNumber));
             deck.addSlide(slide);
 
-            if (slideIndex == 1 && slide.getTitle() != null && !slide.getTitle().isBlank()) {
+            if (slideNumber == 1 && slide.getTitle() != null && !slide.getTitle().isBlank()) {
                 deck.setTitle(slide.getTitle());
             }
+            slideNumber++;
         }
 
         if (deck.getSlideCount() == 0) {
@@ -76,12 +88,75 @@ public class MarkdownSlideParser {
         return deck;
     }
 
+    private void parseGlobalFrontmatter(String text, Map<String, String> globalDirectives, Map<Integer, Map<String, String>> slideOverrides) {
+        String[] lines = text.split("\\r?\\n");
+        Integer currentOverrideSlide = null;
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) continue;
+
+            Matcher slideMatch = SLIDE_OVERRIDE_LINE.matcher(trimmed);
+            if (slideMatch.matches()) {
+                String numStr = slideMatch.group(1) != null ? slideMatch.group(1) : slideMatch.group(2);
+                currentOverrideSlide = Integer.parseInt(numStr);
+                slideOverrides.putIfAbsent(currentOverrideSlide, new HashMap<>());
+
+                String inlineDirective = slideMatch.group(3);
+                if (inlineDirective != null && !inlineDirective.isBlank()) {
+                    parseDirectivesLine(inlineDirective, slideOverrides.get(currentOverrideSlide));
+                }
+                continue;
+            }
+
+            Matcher fmM = FRONTMATTER_LINE.matcher(trimmed);
+            if (fmM.matches()) {
+                String key = fmM.group(1).toLowerCase();
+                String val = fmM.group(2).trim();
+
+                if (line.startsWith(" ") || line.startsWith("\t")) {
+                    if (currentOverrideSlide != null) {
+                        slideOverrides.get(currentOverrideSlide).put(key, val);
+                        continue;
+                    }
+                }
+
+                currentOverrideSlide = null;
+                globalDirectives.put(key, val);
+            }
+        }
+    }
+
+    private void parseDirectivesLine(String line, Map<String, String> targetMap) {
+        String[] parts = line.split("[,;]");
+        for (String part : parts) {
+            Matcher m = FRONTMATTER_LINE.matcher(part.trim());
+            if (m.matches()) {
+                targetMap.put(m.group(1).toLowerCase(), m.group(2).trim());
+            }
+        }
+    }
+
     public Slide parseSlide(int index, String rawContent) {
+        return parseSlideWithContext(index, rawContent, Collections.emptyMap(), Collections.emptyMap());
+    }
+
+    public Slide parseSlideWithContext(int index, String rawContent, Map<String, String> globalDirectives, Map<String, String> specificOverrides) {
         Slide slide = new Slide(index, rawContent);
+
+        // 1. Apply global defaults
+        if (globalDirectives != null) {
+            globalDirectives.forEach((k, v) -> applyDirective(slide, k, v));
+        }
+
+        // 2. Apply per-slide overrides from global frontmatter (if specified)
+        if (specificOverrides != null) {
+            specificOverrides.forEach((k, v) -> applyDirective(slide, k, v));
+        }
 
         String workingContent = rawContent;
 
-        // 1. Parse HTML comment directives: <!-- bg: #ff0000 -->
+        // 3. Parse HTML comment directives: <!-- bg: #ff0000 -->
         Matcher commentMatcher = HTML_COMMENT_DIRECTIVE.matcher(workingContent);
         while (commentMatcher.find()) {
             String key = commentMatcher.group(1).toLowerCase();
@@ -90,7 +165,7 @@ public class MarkdownSlideParser {
         }
         workingContent = commentMatcher.replaceAll("");
 
-        // 2. Parse top key-value lines (frontmatter style before first markdown element)
+        // 4. Parse in-slide directives at the beginning of the slide
         String[] lines = workingContent.split("\\r?\\n");
         StringBuilder markdownBody = new StringBuilder();
         boolean inHeader = true;
@@ -125,7 +200,7 @@ public class MarkdownSlideParser {
                 }
             }
 
-            // Check for speaker notes: lines starting with 'Note:' or '???'
+            // Check for speaker notes
             if (lineTrim.startsWith("Note:") || lineTrim.startsWith("note:")) {
                 slide.addNote(lineTrim.substring(5).trim());
             } else if (lineTrim.equals("???")) {
@@ -135,7 +210,7 @@ public class MarkdownSlideParser {
             }
         }
 
-        // Configure VideoSpec if directives were found
+        // Video specification
         if (videoSource != null || videoJoin != null || slide.getVideoSpec() != null) {
             List<String> joinList = new ArrayList<>();
             if (videoJoin != null) {
@@ -145,6 +220,8 @@ public class MarkdownSlideParser {
                         joinList.add(p.trim());
                     }
                 }
+            } else if (slide.getVideoSpec() != null) {
+                joinList.addAll(slide.getVideoSpec().getJoinFiles());
             }
 
             String cutStart = null;
@@ -153,14 +230,22 @@ public class MarkdownSlideParser {
                 String[] cutParts = videoCut.split("[-–—]");
                 if (cutParts.length >= 1) cutStart = cutParts[0].trim();
                 if (cutParts.length >= 2) cutEnd = cutParts[1].trim();
+            } else if (slide.getVideoSpec() != null) {
+                cutStart = slide.getVideoSpec().getCutStart();
+                cutEnd = slide.getVideoSpec().getCutEnd();
             }
 
-            VideoSpec spec = new VideoSpec(videoSource, cutStart, cutEnd, joinList, videoAutoplay, videoLoop);
+            String finalSrc = videoSource != null ? videoSource : (slide.getVideoSpec() != null ? slide.getVideoSpec().getSourcePath() : null);
+            VideoSpec spec = new VideoSpec(finalSrc, cutStart, cutEnd, joinList, videoAutoplay, videoLoop);
             slide.setVideoSpec(spec);
         }
 
-        // 3. Extract title from Markdown
-        Node document = commonmarkParser.parse(markdownBody.toString());
+        // Clean markdown content (without directives)
+        String cleanMarkdown = markdownBody.toString().trim();
+        slide.setContentMarkdown(cleanMarkdown);
+
+        // 5. Extract title from Markdown AST
+        Node document = commonmarkParser.parse(cleanMarkdown);
         String detectedTitle = findHeadingText(document);
         if (detectedTitle != null && !detectedTitle.isBlank()) {
             slide.setTitle(detectedTitle);
@@ -227,7 +312,7 @@ public class MarkdownSlideParser {
                 StringBuilder sb = new StringBuilder();
                 Node child = heading.getFirstChild();
                 while (child != null) {
-                    if (child instanceof Text t) {
+                    if (child instanceof org.commonmark.node.Text t) {
                         sb.append(t.getLiteral());
                     } else if (child instanceof Code c) {
                         sb.append(c.getLiteral());

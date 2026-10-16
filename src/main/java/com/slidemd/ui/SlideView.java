@@ -35,6 +35,7 @@ public class SlideView extends StackPane {
     private MediaView mediaView;
     private StackPane mediaContainer;
     private ProgressIndicator videoSpinner;
+    private VBox contentBox;
 
     public SlideView(Slide slide, File baseDir, FFmpegService ffmpegService, MarkdownSlideParser parser) {
         this.slide = slide;
@@ -57,16 +58,19 @@ public class SlideView extends StackPane {
         }
 
         // 3. Content Layer (Markdown text, lists, images)
-        VBox contentBox = new VBox(12);
+        contentBox = new VBox(12);
         contentBox.setAlignment(toPos(slide.getAlignment()));
         contentBox.setMaxWidth(1000);
         contentBox.setPadding(new Insets(50, 70, 50, 70));
 
-        // Render Markdown content
-        org.commonmark.node.Node ast = parser.parseMarkdownAst(slide.getRawMarkdown());
-        MarkdownNodeRenderer renderer = new MarkdownNodeRenderer(baseDir, slide.getAlignment());
-        List<Node> renderedNodes = renderer.renderNodes(ast);
-        contentBox.getChildren().addAll(renderedNodes);
+        // Render Markdown content (only content, without directives)
+        String markdownToRender = slide.getContentMarkdown();
+        if (markdownToRender != null && !markdownToRender.isBlank()) {
+            org.commonmark.node.Node ast = parser.parseMarkdownAst(markdownToRender);
+            MarkdownNodeRenderer renderer = new MarkdownNodeRenderer(baseDir, slide.getAlignment());
+            List<Node> renderedNodes = renderer.renderNodes(ast);
+            contentBox.getChildren().addAll(renderedNodes);
+        }
 
         // Add media container if present
         if (mediaContainer != null) {
@@ -75,6 +79,10 @@ public class SlideView extends StackPane {
 
         getChildren().add(contentBox);
         setAlignment(Pos.CENTER);
+    }
+
+    public VBox getContentBox() {
+        return contentBox;
     }
 
     private void setupBackground() {

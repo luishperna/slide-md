@@ -94,4 +94,69 @@ class MarkdownSlideParserTest {
         assertEquals("part1.mp4", slide.getVideoSpec().getJoinFiles().get(0));
         assertEquals("part2.mp4", slide.getVideoSpec().getJoinFiles().get(1));
     }
+
+    @Test
+    void testGlobalFrontmatterNotTreatedAsSlide() {
+        String md = """
+                ---
+                bg: #090d16
+                align: center
+                transition: morph
+                ---
+                
+                # Slide 1 Real
+                Conteúdo do primeiro slide
+                
+                ---
+                # Slide 2 Real
+                Conteúdo do segundo slide
+                """;
+
+        SlideDeck deck = parser.parseContent(md);
+        assertEquals(2, deck.getSlideCount(), "Global config block should NOT be counted as a slide");
+
+        Slide slide1 = deck.getSlide(0);
+        assertEquals("Slide 1 Real", slide1.getTitle());
+        assertEquals("#090d16", slide1.getBackgroundColor());
+        assertEquals(Alignment.CENTER, slide1.getAlignment());
+        assertEquals("morph", slide1.getTransition());
+        assertFalse(slide1.getContentMarkdown().contains("transition:"));
+
+        Slide slide2 = deck.getSlide(1);
+        assertEquals("Slide 2 Real", slide2.getTitle());
+        assertEquals("#090d16", slide2.getBackgroundColor(), "Should inherit global bg");
+        assertEquals("morph", slide2.getTransition(), "Should inherit global morph transition");
+    }
+
+    @Test
+    void testSlideOverridesInGlobalFrontmatter() {
+        String md = """
+                ---
+                bg: #111111
+                transition: morph
+                
+                slide 2:
+                  bg: #222222
+                  align: left
+                ---
+                
+                # Slide 1
+                Primeiro
+                
+                ---
+                # Slide 2
+                Segundo
+                """;
+
+        SlideDeck deck = parser.parseContent(md);
+        assertEquals(2, deck.getSlideCount());
+
+        Slide slide1 = deck.getSlide(0);
+        assertEquals("#111111", slide1.getBackgroundColor());
+
+        Slide slide2 = deck.getSlide(1);
+        assertEquals("#222222", slide2.getBackgroundColor(), "Slide 2 should have overridden background");
+        assertEquals(Alignment.LEFT, slide2.getAlignment(), "Slide 2 should have overridden alignment");
+        assertEquals("morph", slide2.getTransition());
+    }
 }
