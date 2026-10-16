@@ -44,7 +44,7 @@ public class WelcomeView extends VBox {
         VBox newCard = createActionCard(
                 createNewDocIcon(),
                 "Nova Apresentação",
-                "Comece uma apresentação limpa do zero com editor ao vivo",
+                "Comece uma apresentação limpa do zero com o editor Markdown",
                 "Ctrl + N",
                 onNewPresentation
         );

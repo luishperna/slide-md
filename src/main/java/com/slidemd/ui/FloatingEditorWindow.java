@@ -156,13 +156,7 @@ public class FloatingEditorWindow {
         windowTitle.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         windowTitle.setTextFill(Color.web("#a3a3a3"));
 
-        Label liveBadge = new Label("● Ao Vivo");
-        liveBadge.setFont(Font.font("Segoe UI", FontWeight.BOLD, 10.5));
-        liveBadge.setTextFill(Color.web("#34d399"));
-        liveBadge.setStyle("-fx-background-color: rgba(52, 211, 153, 0.12); -fx-background-radius: 8px; -fx-padding: 2 7 2 7;");
-        HBox.setMargin(liveBadge, new Insets(0, 0, 0, 10));
-
-        HBox titleLeftBox = new HBox(logoLabel, separator, windowTitle, liveBadge);
+        HBox titleLeftBox = new HBox(logoLabel, separator, windowTitle);
         titleLeftBox.setAlignment(Pos.CENTER_LEFT);
 
         Region titleSpacer = new Region();
@@ -259,7 +253,7 @@ public class FloatingEditorWindow {
                         "-fx-border-color: #262626 transparent transparent transparent;" +
                         "-fx-border-width: 1px;");
 
-        statusLabel = new Label("0 slides detectados • Atualização em tempo real");
+        statusLabel = new Label("0 slides detectados");
         statusLabel.setFont(Font.font("Segoe UI", 11.5));
         statusLabel.setTextFill(Color.web("#94a3b8"));
 
@@ -578,7 +572,7 @@ public class FloatingEditorWindow {
     private void updateStats() {
         String text = codeArea.getText();
         if (text.isBlank()) {
-            statusLabel.setText("0 slides detectados • Atualização em tempo real");
+            statusLabel.setText("0 slides detectados");
             currentSlideIndicator.setText("Slide 0 / 0");
             return;
         }
@@ -587,7 +581,7 @@ public class FloatingEditorWindow {
         int totalSlides = SlideEditorHelper.findSlideRanges(text).size();
 
         currentSlideIndicator.setText(String.format("Slide %02d / %02d", currentSlide, totalSlides));
-        statusLabel.setText(totalSlides + " slide" + (totalSlides > 1 ? "s" : "") + " detectados • Atualização em tempo real");
+        statusLabel.setText(totalSlides + " slide" + (totalSlides > 1 ? "s" : "") + " detectados");
     }
 
     public void showWindow() {
