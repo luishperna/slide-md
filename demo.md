@@ -29,7 +29,6 @@ Navegação simples e sem distrações:
 
 ---
 bg: #1e1e2e
-align: center
 
 # Modo Transformar (Morph) 🪄
 
