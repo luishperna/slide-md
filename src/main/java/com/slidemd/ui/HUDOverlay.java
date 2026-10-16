@@ -21,11 +21,12 @@ public class HUDOverlay extends HBox {
     private final Button prevBtn;
     private final Button nextBtn;
     private final Button editorBtn;
+    private final Button openBtn;
     private final Button fullscreenBtn;
 
     private final PauseTransition hideTimer;
 
-    public HUDOverlay(Runnable onPrev, Runnable onNext, Runnable onToggleEditor, Runnable onToggleFullscreen) {
+    public HUDOverlay(Runnable onPrev, Runnable onNext, Runnable onToggleEditor, Runnable onOpenFile, Runnable onToggleFullscreen) {
         setAlignment(Pos.CENTER);
         setSpacing(10);
         setPadding(new Insets(6, 14, 6, 14));
@@ -50,10 +51,13 @@ public class HUDOverlay extends HBox {
         editorBtn = createIconButton("MD", "Abrir/Fechar Editor Markdown (M)", onToggleEditor);
         editorBtn.setStyle("-fx-background-color: rgba(56, 189, 248, 0.2); -fx-text-fill: #38bdf8; -fx-font-weight: bold; -fx-font-size: 11px; -fx-background-radius: 12px; -fx-cursor: hand; -fx-padding: 3 8 3 8;");
 
+        // Open File button
+        openBtn = createIconButton("📂", "Abrir Apresentação .md (Ctrl+O)", onOpenFile);
+
         // Fullscreen button
         fullscreenBtn = createIconButton("⛶", "Tela Cheia (F / F11)", onToggleFullscreen);
 
-        getChildren().addAll(prevBtn, counterLabel, nextBtn, editorBtn, fullscreenBtn);
+        getChildren().addAll(prevBtn, counterLabel, nextBtn, editorBtn, openBtn, fullscreenBtn);
 
         // Auto-hide timer
         hideTimer = new PauseTransition(Duration.seconds(2.5));

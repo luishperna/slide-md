@@ -13,15 +13,19 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.StackPane;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -119,7 +123,7 @@ public class SlideMdApp extends Application {
         StackPane.setAlignment(floatingEditor, Pos.CENTER);
 
         // Setup Minimal HUD
-        hudOverlay = new HUDOverlay(this::prevSlide, this::nextSlide, this::toggleEditor, this::toggleFullscreen);
+        hudOverlay = new HUDOverlay(this::prevSlide, this::nextSlide, this::toggleEditor, this::openFileDialog, this::toggleFullscreen);
         StackPane.setAlignment(hudOverlay, Pos.BOTTOM_CENTER);
         StackPane.setMargin(hudOverlay, new Insets(0, 0, 28, 0));
 
@@ -127,6 +131,7 @@ public class SlideMdApp extends Application {
 
         Scene scene = new Scene(rootLayout, 1280, 720);
         setupKeyHandlers(scene);
+        setupDragAndDrop(scene);
         hudOverlay.bindSceneActivity(scene);
 
         stage.setTitle("slide-md");
@@ -277,8 +282,60 @@ public class SlideMdApp extends Application {
         }
     }
 
+    public void openFileDialog() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Abrir Apresentação Markdown");
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("Arquivos Markdown (*.md, *.markdown, *.txt)", "*.md", "*.markdown", "*.txt"),
+            new FileChooser.ExtensionFilter("Todos os Arquivos (*.*)", "*.*")
+        );
+        if (loadedFile != null && loadedFile.getParentFile() != null && loadedFile.getParentFile().exists()) {
+            fileChooser.setInitialDirectory(loadedFile.getParentFile());
+        } else {
+            fileChooser.setInitialDirectory(new File("."));
+        }
+        File selected = fileChooser.showOpenDialog(primaryStage);
+        if (selected != null) {
+            loadFile(selected);
+        }
+    }
+
+    private void setupDragAndDrop(Scene scene) {
+        scene.setOnDragOver(event -> {
+            if (event.getDragboard().hasFiles()) {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
+            event.consume();
+        });
+
+        scene.setOnDragDropped(event -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasFiles()) {
+                List<File> files = db.getFiles();
+                for (File f : files) {
+                    String name = f.getName().toLowerCase();
+                    if (name.endsWith(".md") || name.endsWith(".markdown") || name.endsWith(".txt")) {
+                        loadFile(f);
+                        success = true;
+                        break;
+                    }
+                }
+            }
+            event.setDropCompleted(success);
+            event.consume();
+        });
+    }
+
     private void setupKeyHandlers(Scene scene) {
         scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            // Global Open File shortcut (Ctrl+O on Windows/Linux, Cmd+O on Mac)
+            if (event.isShortcutDown() && event.getCode() == KeyCode.O) {
+                openFileDialog();
+                event.consume();
+                return;
+            }
+
             // When editor is focused, only handle Esc and Ctrl/Cmd shortcuts
             boolean editorFocused = floatingEditor.isVisible() && floatingEditor.lookup(".text-area") != null && floatingEditor.lookup(".text-area").isFocused();
 
