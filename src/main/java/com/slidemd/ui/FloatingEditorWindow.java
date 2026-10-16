@@ -37,23 +37,24 @@ public class FloatingEditorWindow extends VBox {
             }
         });
 
-        // Setup container styling (Glassmorphism Dark)
+        // Setup container styling (Antigravity Dark: #1c1c1c with sleek borders)
         setMaxSize(580, 520);
         setPrefSize(560, 480);
-        setStyle("-fx-background-color: rgba(15, 23, 42, 0.94);" +
-                 "-fx-background-radius: 14px;" +
+        setStyle("-fx-background-color: #1c1c1c;" +
+                 "-fx-background-radius: 12px;" +
                  "-fx-border-color: rgba(255, 255, 255, 0.12);" +
-                 "-fx-border-radius: 14px;" +
+                 "-fx-border-radius: 12px;" +
                  "-fx-border-width: 1px;" +
                  "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.65), 30, 0, 0, 10);");
 
-        // 1. Header (Draggable)
+        // 1. Header (Draggable, #161616)
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(10, 14, 10, 16));
-        header.setStyle("-fx-background-color: #2d2d2d;" +
-                        "-fx-background-radius: 14px 14px 0 0;" +
-                        "-fx-border-color: transparent transparent rgba(255, 255, 255, 0.08) transparent;");
+        header.setStyle("-fx-background-color: #161616;" +
+                        "-fx-background-radius: 12px 12px 0 0;" +
+                        "-fx-border-color: transparent transparent rgba(255, 255, 255, 0.08) transparent;" +
+                        "-fx-border-width: 1px;");
 
         Label title = new Label("Editor Markdown");
         title.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
@@ -63,9 +64,9 @@ public class FloatingEditorWindow extends VBox {
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         Button closeBtn = new Button("✕");
-        closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 2 6 2 6;");
-        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle("-fx-background-color: rgba(239, 68, 68, 0.3); -fx-text-fill: #ffffff; -fx-cursor: hand; -fx-background-radius: 4px;"));
-        closeBtn.setOnMouseExited(e -> closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 2 6 2 6;"));
+        closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 2 8 2 8;");
+        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle("-fx-background-color: #e81123; -fx-text-fill: #ffffff; -fx-cursor: hand; -fx-background-radius: 4px; -fx-padding: 2 8 2 8;"));
+        closeBtn.setOnMouseExited(e -> closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 2 8 2 8;"));
         closeBtn.setOnAction(e -> {
             if (onClose != null) onClose.run();
         });
@@ -82,10 +83,11 @@ public class FloatingEditorWindow extends VBox {
             setTranslateY(e.getSceneY() - dragStartY);
         });
 
-        // 2. Editor TextArea
+        // 2. Editor TextArea (#1c1c1c background)
         editorArea.setWrapText(true);
         editorArea.setFont(Font.font("Consolas", 13.5));
-        editorArea.setStyle("-fx-control-inner-background: #090d16;" +
+        editorArea.setStyle("-fx-control-inner-background: #1c1c1c;" +
+                            "-fx-background-color: #1c1c1c;" +
                             "-fx-text-fill: #f1f5f9;" +
                             "-fx-highlight-fill: #2563eb;" +
                             "-fx-highlight-text-fill: #ffffff;" +
@@ -99,12 +101,14 @@ public class FloatingEditorWindow extends VBox {
             updateStats();
         });
 
-        // 3. Footer / Status bar
+        // 3. Footer / Status bar (#161616)
         HBox footer = new HBox();
         footer.setAlignment(Pos.CENTER_LEFT);
         footer.setPadding(new Insets(6, 14, 8, 14));
-        footer.setStyle("-fx-background-color: rgba(15, 23, 42, 0.9);" +
-                        "-fx-background-radius: 0 0 14px 14px;");
+        footer.setStyle("-fx-background-color: #161616;" +
+                        "-fx-background-radius: 0 0 12px 12px;" +
+                        "-fx-border-color: rgba(255, 255, 255, 0.06) transparent transparent transparent;" +
+                        "-fx-border-width: 1px;");
 
         statusLabel = new Label("Tempo Real • Separe slides com '---'");
         statusLabel.setFont(Font.font("Segoe UI", 11.5));
