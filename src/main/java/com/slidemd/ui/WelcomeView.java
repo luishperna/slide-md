@@ -31,7 +31,7 @@ public class WelcomeView extends VBox {
         logoLabel.setTextFill(Color.web("#ffffff"));
         logoLabel.setStyle("-fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.15), 18, 0.1, 0, 0);");
 
-        Label subtitleLabel = new Label("Apresentações Modernas, Rápidas e Minimalistas em Markdown");
+        Label subtitleLabel = new Label("Apresentações modernas, rápidas e fáceis em Markdown");
         subtitleLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14.5));
         subtitleLabel.setTextFill(Color.web("#737373"));
 

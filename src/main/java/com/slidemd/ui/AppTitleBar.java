@@ -17,6 +17,7 @@ import javafx.stage.Stage;
 
 public class AppTitleBar extends HBox {
 
+    private final Label separator;
     private final Label titleLabel;
     private final Button maxRestoreBtn;
     private final SVGPath maxIcon;
@@ -51,15 +52,17 @@ public class AppTitleBar extends HBox {
         logoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12.5));
         logoLabel.setTextFill(Color.web("#ffffff"));
 
-        Label separator = new Label("—");
+        separator = new Label("—");
         separator.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         separator.setTextFill(Color.web("#404040"));
         HBox.setMargin(separator, new Insets(0, 8, 0, 8));
 
-        titleLabel = new Label(initialTitle != null ? initialTitle : "Início");
+        titleLabel = new Label("");
         titleLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         titleLabel.setTextFill(Color.web("#a3a3a3"));
         titleLabel.setMaxWidth(200);
+
+        setTitle(initialTitle);
 
         HBox leftBox = new HBox(logoLabel, separator, titleLabel);
         leftBox.setAlignment(Pos.CENTER_LEFT);
@@ -176,7 +179,15 @@ public class AppTitleBar extends HBox {
     }
 
     public void setTitle(String title) {
-        titleLabel.setText(title != null && !title.isBlank() ? title : "Início");
+        String trimmed = title != null ? title.trim() : null;
+        boolean hasTitle = trimmed != null && !trimmed.isEmpty()
+                && !trimmed.equalsIgnoreCase("Início")
+                && !trimmed.equalsIgnoreCase("Inicio");
+        separator.setVisible(hasTitle);
+        separator.setManaged(hasTitle);
+        titleLabel.setVisible(hasTitle);
+        titleLabel.setManaged(hasTitle);
+        titleLabel.setText(hasTitle ? trimmed : "");
     }
 
     private Button createDockButton(SVGPath icon, String tooltipText, Runnable action) {

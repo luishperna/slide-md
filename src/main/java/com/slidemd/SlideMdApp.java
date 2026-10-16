@@ -64,7 +64,7 @@ public class SlideMdApp extends Application {
         mainContainer.setStyle("-fx-background-color: #101010;");
 
         // Custom Top Title Bar with Centralized Dock and Navigation
-        appTitleBar = new AppTitleBar(stage, "Início",
+        appTitleBar = new AppTitleBar(stage, null,
                 this::createNewPresentation, this::openFileDialog, this::toggleEditor,
                 this::prevSlide, this::nextSlide);
         mainContainer.setTop(appTitleBar);
@@ -146,9 +146,9 @@ public class SlideMdApp extends Application {
     public void showWelcomeScreen() {
         this.currentDeck = null;
         this.loadedFile = null;
-        primaryStage.setTitle("slide-md — Início");
+        primaryStage.setTitle("slide-md");
         if (appTitleBar != null) {
-            appTitleBar.setTitle("Início");
+            appTitleBar.setTitle(null);
             appTitleBar.setNavigationVisible(false);
         }
         if (currentSlideView != null) {
