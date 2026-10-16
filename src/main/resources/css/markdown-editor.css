@@ -1,0 +1,84 @@
+/* Dark Antigravity theme for Markdown CodeArea */
+.code-area {
+    -fx-background-color: #1c1c1c;
+    background-color: #1c1c1c;
+    -fx-font-family: 'Consolas', 'Cascadia Code', 'Segoe UI', monospace;
+    -fx-font-size: 14px;
+}
+
+.code-area .styled-text-area {
+    -fx-background-color: #1c1c1c;
+}
+
+.code-area .text {
+    -fx-fill: #e2e8f0;
+}
+
+.code-area .lineno {
+    -fx-background-color: #161616;
+    -fx-text-fill: #64748b;
+    -fx-font-family: 'Consolas', 'Cascadia Code', monospace;
+    -fx-font-size: 12.5px;
+    -fx-padding: 0 10px 0 6px;
+    -fx-border-color: transparent rgba(255, 255, 255, 0.06) transparent transparent;
+    -fx-border-width: 1px;
+}
+
+.code-area .caret {
+    -fx-stroke: #38bdf8;
+    -fx-stroke-width: 2px;
+}
+
+.code-area .selection {
+    -fx-fill: rgba(56, 189, 248, 0.3);
+}
+
+/* Scrollbars */
+.virtualized-scroll-pane .scroll-bar:vertical {
+    -fx-background-color: #161616;
+    -fx-pref-width: 10px;
+}
+
+.virtualized-scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: #334155;
+    -fx-background-radius: 4px;
+}
+
+.virtualized-scroll-pane .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #475569;
+}
+
+/* Syntax Highlighting */
+.md-divider {
+    -fx-fill: #38bdf8;
+    -fx-font-weight: bold;
+}
+
+.md-header {
+    -fx-fill: #60a5fa;
+    -fx-font-weight: bold;
+}
+
+.md-directive {
+    -fx-fill: #fbbf24;
+    -fx-font-weight: bold;
+}
+
+.md-quote {
+    -fx-fill: #34d399;
+    -fx-font-style: italic;
+}
+
+.md-list {
+    -fx-fill: #c084fc;
+    -fx-font-weight: bold;
+}
+
+.md-code {
+    -fx-fill: #f472b6;
+}
+
+.md-bold {
+    -fx-fill: #ffffff;
+    -fx-font-weight: bold;
+}

@@ -122,16 +122,15 @@ public class SlideMdApp extends Application {
         slideContainer.setAlignment(Pos.CENTER);
         rootLayout.getChildren().add(slideContainer);
 
-        // Setup Floating Editor
-        floatingEditor = new FloatingEditorWindow(this::onEditorContentChanged, this::toggleEditor);
-        StackPane.setAlignment(floatingEditor, Pos.CENTER);
+        // Setup Standalone Floating Editor Window (opens outside presentation)
+        floatingEditor = new FloatingEditorWindow(stage, this::onEditorContentChanged, this::savePresentation);
 
         // Setup Minimal HUD (fullscreen button moved to top bar expander)
         hudOverlay = new HUDOverlay(this::prevSlide, this::nextSlide, this::toggleEditor, this::openFileDialog);
         StackPane.setAlignment(hudOverlay, Pos.BOTTOM_CENTER);
         StackPane.setMargin(hudOverlay, new Insets(0, 0, 28, 0));
 
-        rootLayout.getChildren().addAll(hudOverlay, floatingEditor);
+        rootLayout.getChildren().add(hudOverlay);
 
         Scene scene = new Scene(mainContainer, 1280, 720);
         setupKeyHandlers(scene);
@@ -437,9 +436,6 @@ public class SlideMdApp extends Application {
                 return;
             }
 
-            // When editor is focused, only handle Esc and Ctrl/Cmd shortcuts
-            boolean editorFocused = floatingEditor.isVisible() && floatingEditor.lookup(".text-area") != null && floatingEditor.lookup(".text-area").isFocused();
-
             if (event.getCode() == KeyCode.ESCAPE) {
                 if (floatingEditor.isVisible()) {
                     floatingEditor.hideWindow();
@@ -448,11 +444,6 @@ public class SlideMdApp extends Application {
                     primaryStage.setFullScreen(false);
                     event.consume();
                 }
-                return;
-            }
-
-            if (editorFocused) {
-                // Allow regular typing in editor
                 return;
             }
 
