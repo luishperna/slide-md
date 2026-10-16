@@ -21,53 +21,94 @@ public class AppTitleBar extends HBox {
     private final Button maxRestoreBtn;
     private final SVGPath maxIcon;
     private final SVGPath restoreIcon;
-    private final HBox controls;
+
+    private final Button prevBtn;
+    private final Button nextBtn;
+    private final SVGPath prevIcon;
+    private final SVGPath nextIcon;
+    private final Label counterLabel;
+    private final HBox navGroup;
 
     private double dragOffsetX;
     private double dragOffsetY;
 
-    public AppTitleBar(Stage stage, String initialTitle, Runnable onNewFile, Runnable onOpenFile) {
+    public AppTitleBar(Stage stage, String initialTitle,
+                       Runnable onNewFile, Runnable onOpenFile, Runnable onToggleEditor,
+                       Runnable onPrevSlide, Runnable onNextSlide) {
         setAlignment(Pos.CENTER_LEFT);
-        setPrefHeight(34);
-        setMinHeight(34);
-        setMaxHeight(34);
-        setPadding(new Insets(0, 0, 0, 12));
+        setPrefHeight(38);
+        setMinHeight(38);
+        setMaxHeight(38);
+        setPadding(new Insets(0, 0, 0, 14));
 
         // Antigravity dark theme: #161616
         setStyle("-fx-background-color: #161616;" +
                  "-fx-border-color: transparent transparent rgba(255, 255, 255, 0.06) transparent;" +
                  "-fx-border-width: 1px;");
 
-        // 1. App Logo
+        // 1. Left Section: Logo & Presentation Title
         Label logoLabel = new Label("⚡ slide-md");
         logoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12.5));
         logoLabel.setTextFill(Color.web("#38bdf8"));
 
-        // 2. Action buttons: Nova Apresentação e Abrir Existente
-        SVGPath newDocIcon = createNewDocIcon();
-        Button newBtn = createActionButton(newDocIcon, "Nova Apresentação (Ctrl+N)", onNewFile);
-
-        SVGPath folderIcon = createFolderIcon();
-        Button openBtn = createActionButton(folderIcon, "Abrir Apresentação Existente (Ctrl+O)", onOpenFile);
-
-        HBox actionGroup = new HBox(4, newBtn, openBtn);
-        actionGroup.setAlignment(Pos.CENTER_LEFT);
-        HBox.setMargin(actionGroup, new Insets(0, 8, 0, 10));
-
         Label separator = new Label("—");
         separator.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         separator.setTextFill(Color.web("#475569"));
-        HBox.setMargin(separator, new Insets(0, 6, 0, 0));
+        HBox.setMargin(separator, new Insets(0, 8, 0, 8));
 
-        titleLabel = new Label(initialTitle != null ? initialTitle : "Apresentação");
+        titleLabel = new Label(initialTitle != null ? initialTitle : "Início");
         titleLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         titleLabel.setTextFill(Color.web("#94a3b8"));
-        HBox.setMargin(titleLabel, new Insets(0, 0, 0, 6));
+        titleLabel.setMaxWidth(200);
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox leftBox = new HBox(logoLabel, separator, titleLabel);
+        leftBox.setAlignment(Pos.CENTER_LEFT);
 
-        // 3. Vector SVG Window Controls (sempre visíveis)
+        Region leftSpacer = new Region();
+        HBox.setHgrow(leftSpacer, Priority.ALWAYS);
+
+        // 2. Center Section: Centralized Modern Action & Navigation Dock
+        HBox centerDock = new HBox(6);
+        centerDock.setAlignment(Pos.CENTER);
+        centerDock.setPadding(new Insets(3, 10, 3, 10));
+        centerDock.setStyle("-fx-background-color: #1f1f1f;" +
+                            "-fx-background-radius: 20px;" +
+                            "-fx-border-color: rgba(255, 255, 255, 0.1);" +
+                            "-fx-border-radius: 20px;" +
+                            "-fx-border-width: 1px;" +
+                            "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 10, 0, 0, 2);");
+
+        Button newBtn = createDockButton(createNewDocIcon(), "Nova Apresentação (Ctrl+N)", onNewFile);
+        Button openBtn = createDockButton(createFolderIcon(), "Abrir Apresentação Existente (Ctrl+O)", onOpenFile);
+        Button editorBtn = createDockButton(createEditorIcon(), "Editor Markdown (M / E)", onToggleEditor);
+
+        Label dockDivider = new Label("|");
+        dockDivider.setTextFill(Color.web("#475569"));
+        dockDivider.setFont(Font.font("Segoe UI", 12));
+        HBox.setMargin(dockDivider, new Insets(0, 4, 0, 4));
+
+        prevIcon = createLeftChevron();
+        prevBtn = createDockButton(prevIcon, "Slide Anterior (Seta Esquerda / Clique à Esquerda)", onPrevSlide);
+
+        counterLabel = new Label("-- / --");
+        counterLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11.5));
+        counterLabel.setTextFill(Color.web("#cbd5e1"));
+        HBox.setMargin(counterLabel, new Insets(0, 6, 0, 6));
+
+        nextIcon = createRightChevron();
+        nextBtn = createDockButton(nextIcon, "Próximo Slide (Seta Direita / Espaço / Clique à Direita)", onNextSlide);
+
+        navGroup = new HBox(4, dockDivider, prevBtn, counterLabel, nextBtn);
+        navGroup.setAlignment(Pos.CENTER);
+        navGroup.setVisible(false);
+        navGroup.setManaged(false);
+
+        centerDock.getChildren().addAll(newBtn, openBtn, editorBtn, navGroup);
+
+        Region rightSpacer = new Region();
+        HBox.setHgrow(rightSpacer, Priority.ALWAYS);
+
+        // 3. Right Section: Window Controls (Minimize, Fullscreen, Close)
         SVGPath minIcon = createMinIcon();
         maxIcon = createMaxIcon();
         restoreIcon = createRestoreIcon();
@@ -79,7 +120,6 @@ public class AppTitleBar extends HBox {
             stage.setFullScreen(!stage.isFullScreen());
         });
 
-        // Handle dual icons for maxRestoreBtn
         maxRestoreBtn.setOnMouseEntered(e -> {
             maxRestoreBtn.setStyle("-fx-background-color: #262626; -fx-background-radius: 0; -fx-cursor: hand; -fx-padding: 0;");
             maxIcon.setStroke(Color.WHITE);
@@ -93,11 +133,10 @@ public class AppTitleBar extends HBox {
 
         Button closeBtn = createWindowButton(closeIcon, true, "Fechar", stage::close);
 
-        controls = new HBox(minimizeBtn, maxRestoreBtn, closeBtn);
+        HBox controls = new HBox(minimizeBtn, maxRestoreBtn, closeBtn);
         controls.setAlignment(Pos.CENTER_RIGHT);
-        controls.setOpacity(1.0); // Sempre visíveis conforme solicitado
 
-        getChildren().addAll(logoLabel, actionGroup, separator, titleLabel, spacer, controls);
+        getChildren().addAll(leftBox, leftSpacer, centerDock, rightSpacer, controls);
 
         // Window dragging logic (only when not fullscreen)
         setOnMousePressed(e -> {
@@ -125,27 +164,29 @@ public class AppTitleBar extends HBox {
         stage.fullScreenProperty().addListener((obs, oldVal, isFull) -> updateMaxRestoreIcon(isFull));
     }
 
-    private SVGPath createNewDocIcon() {
-        SVGPath path = new SVGPath();
-        path.setContent("M 2 1.5 L 7 1.5 L 10 4.5 L 10 11.5 L 2 11.5 Z M 7 1.5 L 7 4.5 L 10 4.5 M 4 8 L 8 8 M 6 6 L 6 10");
-        path.setStroke(Color.web("#94a3b8"));
-        path.setStrokeWidth(1.15);
-        path.setStrokeLineCap(StrokeLineCap.ROUND);
-        path.setFill(Color.TRANSPARENT);
-        return path;
+    public void updateCounter(int currentSlide, int totalSlides) {
+        if (totalSlides <= 0) {
+            setNavigationVisible(false);
+            return;
+        }
+        setNavigationVisible(true);
+        counterLabel.setText(String.format("%02d / %02d", currentSlide + 1, totalSlides));
+        prevBtn.setDisable(currentSlide <= 0);
+        nextBtn.setDisable(currentSlide >= totalSlides - 1);
+        prevIcon.setStroke(currentSlide <= 0 ? Color.web("#475569") : Color.web("#38bdf8"));
+        nextIcon.setStroke(currentSlide >= totalSlides - 1 ? Color.web("#475569") : Color.web("#38bdf8"));
     }
 
-    private SVGPath createFolderIcon() {
-        SVGPath path = new SVGPath();
-        path.setContent("M 1.5 2.5 L 4.5 2.5 L 6 4 L 11.5 4 L 11.5 11 L 1.5 11 Z");
-        path.setStroke(Color.web("#94a3b8"));
-        path.setStrokeWidth(1.15);
-        path.setStrokeLineCap(StrokeLineCap.ROUND);
-        path.setFill(Color.TRANSPARENT);
-        return path;
+    public void setNavigationVisible(boolean visible) {
+        navGroup.setVisible(visible);
+        navGroup.setManaged(visible);
     }
 
-    private Button createActionButton(SVGPath icon, String tooltipText, Runnable action) {
+    public void setTitle(String title) {
+        titleLabel.setText(title != null && !title.isBlank() ? title : "Início");
+    }
+
+    private Button createDockButton(SVGPath icon, String tooltipText, Runnable action) {
         Button btn = new Button();
         btn.setGraphic(icon);
         btn.setPrefWidth(28);
@@ -159,7 +200,7 @@ public class AppTitleBar extends HBox {
                            "-fx-cursor: hand;" +
                            "-fx-padding: 0;";
 
-        String hoverStyle = "-fx-background-color: #262626;" +
+        String hoverStyle = "-fx-background-color: #2e2e2e;" +
                             "-fx-background-radius: 4px;" +
                             "-fx-cursor: hand;" +
                             "-fx-padding: 0;";
@@ -167,11 +208,13 @@ public class AppTitleBar extends HBox {
         btn.setStyle(baseStyle);
         btn.setOnMouseEntered(e -> {
             btn.setStyle(hoverStyle);
-            icon.setStroke(Color.WHITE);
+            if (!btn.isDisabled()) icon.setStroke(Color.WHITE);
         });
         btn.setOnMouseExited(e -> {
             btn.setStyle(baseStyle);
-            icon.setStroke(Color.web("#94a3b8"));
+            if (!btn.isDisabled()) {
+                icon.setStroke(icon == prevIcon || icon == nextIcon ? Color.web("#38bdf8") : Color.web("#94a3b8"));
+            }
         });
 
         btn.setOnAction(e -> {
@@ -183,6 +226,56 @@ public class AppTitleBar extends HBox {
         }
 
         return btn;
+    }
+
+    private SVGPath createNewDocIcon() {
+        SVGPath path = new SVGPath();
+        path.setContent("M 2 1.5 L 6.5 1.5 L 9.5 4.5 L 9.5 11.5 L 2 11.5 Z M 6.5 1.5 L 6.5 4.5 L 9.5 4.5 M 4 7.5 L 7.5 7.5 M 5.75 5.75 L 5.75 9.25");
+        path.setStroke(Color.web("#94a3b8"));
+        path.setStrokeWidth(1.15);
+        path.setStrokeLineCap(StrokeLineCap.ROUND);
+        path.setFill(Color.TRANSPARENT);
+        return path;
+    }
+
+    private SVGPath createFolderIcon() {
+        SVGPath path = new SVGPath();
+        path.setContent("M 1.5 2.5 L 4.5 2.5 L 6 4 L 10.5 4 L 10.5 10.5 L 1.5 10.5 Z");
+        path.setStroke(Color.web("#94a3b8"));
+        path.setStrokeWidth(1.15);
+        path.setStrokeLineCap(StrokeLineCap.ROUND);
+        path.setFill(Color.TRANSPARENT);
+        return path;
+    }
+
+    private SVGPath createEditorIcon() {
+        SVGPath path = new SVGPath();
+        path.setContent("M 1.5 10.5 L 4 10.5 L 10.5 4 L 8 1.5 L 1.5 8 Z M 7 2.5 L 9.5 5");
+        path.setStroke(Color.web("#94a3b8"));
+        path.setStrokeWidth(1.15);
+        path.setStrokeLineCap(StrokeLineCap.ROUND);
+        path.setFill(Color.TRANSPARENT);
+        return path;
+    }
+
+    private SVGPath createLeftChevron() {
+        SVGPath path = new SVGPath();
+        path.setContent("M 6.5 2 L 2.5 6 L 6.5 10");
+        path.setStroke(Color.web("#38bdf8"));
+        path.setStrokeWidth(1.4);
+        path.setStrokeLineCap(StrokeLineCap.ROUND);
+        path.setFill(Color.TRANSPARENT);
+        return path;
+    }
+
+    private SVGPath createRightChevron() {
+        SVGPath path = new SVGPath();
+        path.setContent("M 3.5 2 L 7.5 6 L 3.5 10");
+        path.setStroke(Color.web("#38bdf8"));
+        path.setStrokeWidth(1.4);
+        path.setStrokeLineCap(StrokeLineCap.ROUND);
+        path.setFill(Color.TRANSPARENT);
+        return path;
     }
 
     private SVGPath createMinIcon() {
@@ -227,9 +320,9 @@ public class AppTitleBar extends HBox {
         Button btn = new Button();
         btn.setGraphic(icon);
         btn.setPrefWidth(46);
-        btn.setPrefHeight(34);
-        btn.setMinHeight(34);
-        btn.setMaxHeight(34);
+        btn.setPrefHeight(38);
+        btn.setMinHeight(38);
+        btn.setMaxHeight(38);
         btn.setAlignment(Pos.CENTER);
 
         String baseStyle = "-fx-background-color: transparent;" +
@@ -260,10 +353,6 @@ public class AppTitleBar extends HBox {
         }
 
         return btn;
-    }
-
-    public void setTitle(String title) {
-        titleLabel.setText(title != null ? title : "Apresentação");
     }
 
     private void updateMaxRestoreIcon(boolean isFullScreen) {

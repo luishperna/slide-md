@@ -6,18 +6,20 @@ import com.slidemd.model.SlideDeck;
 import com.slidemd.parser.MarkdownSlideParser;
 import com.slidemd.ui.AppTitleBar;
 import com.slidemd.ui.FloatingEditorWindow;
-import com.slidemd.ui.HUDOverlay;
 import com.slidemd.ui.SlideView;
+import com.slidemd.ui.WelcomeView;
 import com.slidemd.ui.WindowResizeHelper;
 import com.slidemd.video.FFmpegService;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
@@ -45,61 +47,12 @@ public class SlideMdApp extends Application {
     private AppTitleBar appTitleBar;
     private StackPane rootLayout;
     private StackPane slideContainer;
-    private HUDOverlay hudOverlay;
     private FloatingEditorWindow floatingEditor;
 
     private SlideDeck currentDeck;
     private int currentSlideIndex = 0;
     private SlideView currentSlideView;
     private File loadedFile;
-
-    private static final String DEFAULT_PRESENTATION = """
-            ---
-            bg: linear-gradient(to bottom right, #090d16, #1e293b)
-            align: center
-            transition: morph
-
-            slide 2:
-              bg: #0f172a
-              align: left
-            ---
-
-            # slide-md
-            Apresentações Modernas e Rápidas em Java através de Markdown
-
-            Pressione **Espaço** ou **Seta Direita** para navegar
-
-            ---
-
-            # Recursos Principais
-
-            - **Ultra Rápido & Performático**: Renderização nativa em JavaFX a 60 FPS
-            - **Modo Transformar (Morph)**: Elementos se movem com suavidade entre os slides
-            - **Editor Flutuante**: Pressione `M` ou clique em `MD` para editar ao vivo
-            - **Abertura Visual**: Botão `📂` ou arraste e solte arquivos `.md` na janela
-
-            ---
-            bg: #1e1e2e
-            align: center
-
-            # Transição Transformar 🪄
-
-            > "Elementos entram e saem da tela com animação escalonada."
-
-            Configure no início da apresentação com `transition: morph`.
-
-            ---
-            bg: #111827
-            align: center
-
-            # Suporte a Vídeo Nativo
-
-            Defina no slide:
-            `video: caminho/para/video.mp4`
-            `cut: 00:05 - 00:25`
-
-            O corte virtual é feito nativamente em Java (0ms) sem exigir FFmpeg!
-            """;
 
     @Override
     public void start(Stage stage) {
@@ -110,32 +63,38 @@ public class SlideMdApp extends Application {
         BorderPane mainContainer = new BorderPane();
         mainContainer.setStyle("-fx-background-color: #000000;");
 
-        // Custom Top Title Bar with Antigravity-style #161616 dark theme
-        appTitleBar = new AppTitleBar(stage, "slide-md", this::createNewPresentation, this::openFileDialog);
+        // Custom Top Title Bar with Centralized Dock and Navigation
+        appTitleBar = new AppTitleBar(stage, "Início",
+                this::createNewPresentation, this::openFileDialog, this::toggleEditor,
+                this::prevSlide, this::nextSlide);
         mainContainer.setTop(appTitleBar);
 
         rootLayout = new StackPane();
         rootLayout.setStyle("-fx-background-color: #000000;");
         mainContainer.setCenter(rootLayout);
 
+        // Slide Container with Click Navigation (left half = back, right half = next)
         slideContainer = new StackPane();
         slideContainer.setAlignment(Pos.CENTER);
+        slideContainer.setOnMouseClicked(event -> {
+            if (currentDeck == null || currentDeck.getSlideCount() == 0) return;
+            if (event.getButton() != MouseButton.PRIMARY) return;
+
+            double width = slideContainer.getWidth();
+            if (event.getX() < width / 2.0) {
+                prevSlide();
+            } else {
+                nextSlide();
+            }
+        });
         rootLayout.getChildren().add(slideContainer);
 
         // Setup Standalone Floating Editor Window (opens outside presentation)
         floatingEditor = new FloatingEditorWindow(stage, this::onEditorContentChanged, this::savePresentation);
 
-        // Setup Minimal HUD (fullscreen button moved to top bar expander)
-        hudOverlay = new HUDOverlay(this::prevSlide, this::nextSlide, this::toggleEditor, this::openFileDialog);
-        StackPane.setAlignment(hudOverlay, Pos.BOTTOM_CENTER);
-        StackPane.setMargin(hudOverlay, new Insets(0, 0, 28, 0));
-
-        rootLayout.getChildren().add(hudOverlay);
-
         Scene scene = new Scene(mainContainer, 1280, 720);
         setupKeyHandlers(scene);
         setupDragAndDrop(scene);
-        hudOverlay.bindSceneActivity(scene);
         WindowResizeHelper.addResizeListener(stage, scene);
 
         // Hide title bar when entering full screen, show when windowed
@@ -166,7 +125,7 @@ public class SlideMdApp extends Application {
         stage.setMinWidth(800);
         stage.setMinHeight(500);
 
-        // Load presentation from CLI argument or default demo
+        // Open Welcome Screen by default, or load CLI argument file
         loadInitialPresentation();
 
         stage.show();
@@ -181,14 +140,25 @@ public class SlideMdApp extends Application {
                 return;
             }
         }
+        showWelcomeScreen();
+    }
 
-        // Check if demo.md exists in current working directory
-        File localDemo = new File("demo.md");
-        if (localDemo.exists()) {
-            loadFile(localDemo);
-        } else {
-            loadDefaultDeck();
+    public void showWelcomeScreen() {
+        this.currentDeck = null;
+        this.loadedFile = null;
+        primaryStage.setTitle("slide-md — Início");
+        if (appTitleBar != null) {
+            appTitleBar.setTitle("Início");
+            appTitleBar.setNavigationVisible(false);
         }
+        if (currentSlideView != null) {
+            currentSlideView.onSlideLeave();
+            currentSlideView.dispose();
+            currentSlideView = null;
+        }
+        WelcomeView welcomeView = new WelcomeView(this::createNewPresentation, this::openFileDialog);
+        slideContainer.getChildren().setAll(welcomeView);
+        slideContainer.setCursor(Cursor.DEFAULT);
     }
 
     public void loadFile(File file) {
@@ -198,25 +168,16 @@ public class SlideMdApp extends Application {
             primaryStage.setTitle("slide-md — " + currentDeck.getTitle());
             if (appTitleBar != null) {
                 appTitleBar.setTitle(currentDeck.getTitle());
+                appTitleBar.setNavigationVisible(true);
             }
             floatingEditor.setMarkdownContent(Files.readString(file.toPath(), StandardCharsets.UTF_8));
             currentSlideIndex = 0;
+            slideContainer.setCursor(Cursor.HAND);
             displaySlide(currentSlideIndex, false, true);
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Erro ao carregar arquivo: " + file.getAbsolutePath(), e);
-            loadDefaultDeck();
+            showWelcomeScreen();
         }
-    }
-
-    private void loadDefaultDeck() {
-        this.currentDeck = parser.parseContent(DEFAULT_PRESENTATION);
-        primaryStage.setTitle("slide-md — Apresentação Demonstrativa");
-        if (appTitleBar != null) {
-            appTitleBar.setTitle("Apresentação Demonstrativa");
-        }
-        floatingEditor.setMarkdownContent(DEFAULT_PRESENTATION);
-        currentSlideIndex = 0;
-        displaySlide(currentSlideIndex, false, true);
     }
 
     private void onEditorContentChanged(String newMarkdown) {
@@ -250,7 +211,7 @@ public class SlideMdApp extends Application {
         File baseDir = loadedFile != null ? loadedFile.getParentFile() : new File(".");
         SlideView nextView = new SlideView(targetSlide, baseDir, ffmpegService, parser);
 
-        hudOverlay.updateCounter(index, currentDeck.getSlideCount());
+        appTitleBar.updateCounter(index, currentDeck.getSlideCount());
 
         if (!animated || currentSlideView == null) {
             if (currentSlideView != null) {
@@ -341,9 +302,11 @@ public class SlideMdApp extends Application {
         primaryStage.setTitle("slide-md — Nova Apresentação");
         if (appTitleBar != null) {
             appTitleBar.setTitle("Nova Apresentação");
+            appTitleBar.setNavigationVisible(true);
         }
         floatingEditor.setMarkdownContent(newTemplate);
         currentSlideIndex = 0;
+        slideContainer.setCursor(Cursor.HAND);
         displaySlide(0, false, true);
         floatingEditor.showWindow();
     }
