@@ -143,6 +143,16 @@ public class SlideView extends StackPane {
                             mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
                         }
 
+                        // Pure Java Native Virtual Cutting (Works 100% without FFmpeg)
+                        Double startSec = slide.getVideoSpec().getCutStartSeconds();
+                        if (startSec != null && startSec > 0) {
+                            mediaPlayer.setStartTime(Duration.seconds(startSec));
+                        }
+                        Double endSec = slide.getVideoSpec().getCutEndSeconds();
+                        if (endSec != null && endSec > 0) {
+                            mediaPlayer.setStopTime(Duration.seconds(endSec));
+                        }
+
                         mediaPlayer.setOnReady(() -> {
                             mediaContainer.getChildren().remove(videoSpinner);
                             if (!mediaContainer.getChildren().contains(mediaView)) {
@@ -177,7 +187,12 @@ public class SlideView extends StackPane {
 
     public void onSlideEnter() {
         if (mediaPlayer != null) {
-            mediaPlayer.seek(Duration.ZERO);
+            Double startSec = slide.getVideoSpec() != null ? slide.getVideoSpec().getCutStartSeconds() : null;
+            if (startSec != null && startSec > 0) {
+                mediaPlayer.seek(Duration.seconds(startSec));
+            } else {
+                mediaPlayer.seek(Duration.ZERO);
+            }
             if (slide.getVideoSpec() != null && slide.getVideoSpec().isAutoplay()) {
                 mediaPlayer.play();
             }

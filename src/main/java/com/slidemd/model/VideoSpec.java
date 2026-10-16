@@ -54,6 +54,31 @@ public class VideoSpec {
         return cutStart != null && !cutStart.isEmpty() || (cutEnd != null && !cutEnd.isEmpty());
     }
 
+    public Double getCutStartSeconds() {
+        return parseSeconds(cutStart);
+    }
+
+    public Double getCutEndSeconds() {
+        return parseSeconds(cutEnd);
+    }
+
+    public static Double parseSeconds(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String clean = raw.trim().replace("s", "");
+        String[] parts = clean.split(":");
+        try {
+            if (parts.length == 1) {
+                return Double.parseDouble(parts[0]);
+            } else if (parts.length == 2) {
+                return Integer.parseInt(parts[0]) * 60 + Double.parseDouble(parts[1]);
+            } else if (parts.length == 3) {
+                return Integer.parseInt(parts[0]) * 3600 + Integer.parseInt(parts[1]) * 60 + Double.parseDouble(parts[2]);
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        return null;
+    }
+
     public boolean hasJoin() {
         return joinFiles != null && !joinFiles.isEmpty();
     }
