@@ -1,0 +1,21 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IDEs ###
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+### Application Cache ###
+.slide-md-cache/
+*.log
+
+### OS ###
+Thumbs.db
+Desktop.ini
+.DS_Store
