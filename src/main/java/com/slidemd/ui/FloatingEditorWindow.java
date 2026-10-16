@@ -74,9 +74,18 @@ public class FloatingEditorWindow {
             Pattern.MULTILINE
     );
 
+    private final Consumer<Integer> onSlideNavigated;
+    private boolean isNavigatingProgrammatically = false;
+    private int lastNavigatedSlideIndex = -1;
+
     public FloatingEditorWindow(Stage ownerStage, Consumer<String> onContentChanged, Runnable onSave) {
+        this(ownerStage, onContentChanged, onSave, null);
+    }
+
+    public FloatingEditorWindow(Stage ownerStage, Consumer<String> onContentChanged, Runnable onSave, Consumer<Integer> onSlideNavigated) {
         this.onContentChanged = onContentChanged;
         this.onSave = onSave;
+        this.onSlideNavigated = onSlideNavigated;
         this.editorStage = new Stage();
 
         if (ownerStage != null) {
@@ -130,6 +139,7 @@ public class FloatingEditorWindow {
 
         codeArea.caretPositionProperty().addListener((obs, oldVal, newVal) -> {
             updateStats();
+            checkSlideNavigated();
         });
 
         // 1. Barra Superior Customizada (#161616 - Idêntica à estética do App)
@@ -584,7 +594,46 @@ public class FloatingEditorWindow {
         statusLabel.setText(totalSlides + " slide" + (totalSlides > 1 ? "s" : "") + " detectados");
     }
 
+    public int getCaretPosition() {
+        return codeArea.getCaretPosition();
+    }
+
+    private void checkSlideNavigated() {
+        if (isNavigatingProgrammatically) return;
+        String text = codeArea.getText();
+        if (text.isBlank()) return;
+        int caret = codeArea.getCaretPosition();
+        int currentSlide = SlideEditorHelper.getSlideIndexAtCaret(text, caret);
+        if (currentSlide != lastNavigatedSlideIndex) {
+            lastNavigatedSlideIndex = currentSlide;
+            if (onSlideNavigated != null) {
+                onSlideNavigated.accept(currentSlide);
+            }
+        }
+    }
+
+    public void scrollToSlide(int slideIndex) {
+        if (slideIndex < 0) return;
+        String text = codeArea.getText();
+        if (text.isBlank()) return;
+        int caret = SlideEditorHelper.getSlideStartCaret(text, slideIndex);
+
+        isNavigatingProgrammatically = true;
+        lastNavigatedSlideIndex = slideIndex;
+        try {
+            codeArea.moveTo(caret);
+            codeArea.requestFollowCaret();
+            updateStats();
+        } finally {
+            isNavigatingProgrammatically = false;
+        }
+    }
+
     public void showWindow() {
+        showWindow(-1);
+    }
+
+    public void showWindow(int initialSlideIndex) {
         if (!editorStage.isShowing()) {
             if (!stagePositioned && editorStage.getOwner() instanceof Stage owner && owner.isShowing()) {
                 editorStage.setX(owner.getX() + 60);
@@ -594,6 +643,9 @@ public class FloatingEditorWindow {
             editorStage.show();
         }
         editorStage.toFront();
+        if (initialSlideIndex >= 0) {
+            scrollToSlide(initialSlideIndex);
+        }
         codeArea.requestFocus();
     }
 
@@ -604,10 +656,14 @@ public class FloatingEditorWindow {
     }
 
     public void toggleWindow() {
+        toggleWindow(-1);
+    }
+
+    public void toggleWindow(int initialSlideIndex) {
         if (editorStage.isShowing()) {
             hideWindow();
         } else {
-            showWindow();
+            showWindow(initialSlideIndex);
         }
     }
 

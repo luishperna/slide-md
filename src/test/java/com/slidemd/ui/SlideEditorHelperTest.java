@@ -76,4 +76,17 @@ class SlideEditorHelperTest {
         assertTrue(updated.contains("bg: #090d16"));
         assertFalse(updated.contains("bg: #1e293b"));
     }
+
+    @Test
+    void testGetSlideStartCaret() {
+        String md = "# Slide 1\n\n---\n\n# Slide 2\n\n---\n\n# Slide 3";
+        assertEquals(0, SlideEditorHelper.getSlideStartCaret(md, 0));
+        int slide2Start = SlideEditorHelper.getSlideStartCaret(md, 1);
+        assertTrue(slide2Start > 0);
+        assertTrue(md.substring(slide2Start).stripLeading().startsWith("# Slide 2"));
+
+        int slide3Start = SlideEditorHelper.getSlideStartCaret(md, 2);
+        assertTrue(slide3Start > slide2Start);
+        assertTrue(md.substring(slide3Start).stripLeading().startsWith("# Slide 3"));
+    }
 }

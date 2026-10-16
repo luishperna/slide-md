@@ -63,6 +63,17 @@ public final class SlideEditorHelper {
     }
 
     /**
+     * Retorna a posição do caractere onde o slide indicado inicia.
+     */
+    public static int getSlideStartCaret(String text, int slideIndex) {
+        List<SlideRange> ranges = findSlideRanges(text);
+        if (ranges.isEmpty()) return 0;
+        if (slideIndex <= 0) return 0;
+        if (slideIndex >= ranges.size()) return ranges.get(ranges.size() - 1).startIndex();
+        return ranges.get(slideIndex).startIndex();
+    }
+
+    /**
      * Remove o slide onde o cursor está localizado.
      * Se for o único slide, reinicia com um slide vazio padrão.
      */

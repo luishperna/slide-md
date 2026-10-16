@@ -6,6 +6,7 @@ import com.slidemd.model.SlideDeck;
 import com.slidemd.parser.MarkdownSlideParser;
 import com.slidemd.ui.AppTitleBar;
 import com.slidemd.ui.FloatingEditorWindow;
+import com.slidemd.ui.SlideEditorHelper;
 import com.slidemd.ui.SlideView;
 import com.slidemd.ui.WelcomeView;
 import com.slidemd.ui.WindowResizeHelper;
@@ -89,8 +90,8 @@ public class SlideMdApp extends Application {
         });
         rootLayout.getChildren().add(slideContainer);
 
-        // Setup Standalone Floating Editor Window (opens outside presentation)
-        floatingEditor = new FloatingEditorWindow(stage, this::onEditorContentChanged, this::savePresentation);
+        // Setup Standalone Floating Editor Window (opens outside presentation with two-way sync)
+        floatingEditor = new FloatingEditorWindow(stage, this::onEditorContentChanged, this::savePresentation, this::onEditorSlideNavigated);
 
         Scene scene = new Scene(mainContainer, 1280, 720);
         setupKeyHandlers(scene);
@@ -180,6 +181,15 @@ public class SlideMdApp extends Application {
         }
     }
 
+    private void onEditorSlideNavigated(int slideIndex) {
+        if (currentDeck != null && slideIndex >= 0 && slideIndex < currentDeck.getSlideCount()) {
+            if (slideIndex != currentSlideIndex) {
+                currentSlideIndex = slideIndex;
+                displaySlide(currentSlideIndex, false, true);
+            }
+        }
+    }
+
     private void onEditorContentChanged(String newMarkdown) {
         Platform.runLater(() -> {
             SlideDeck updatedDeck = parser.parseContent(newMarkdown);
@@ -187,7 +197,10 @@ public class SlideMdApp extends Application {
             updatedDeck.setSourceFile(loadedFile);
             this.currentDeck = updatedDeck;
 
-            if (currentSlideIndex >= currentDeck.getSlideCount()) {
+            int editingSlide = SlideEditorHelper.getSlideIndexAtCaret(newMarkdown, floatingEditor.getCaretPosition());
+            if (editingSlide >= 0 && editingSlide < currentDeck.getSlideCount()) {
+                currentSlideIndex = editingSlide;
+            } else if (currentSlideIndex >= currentDeck.getSlideCount()) {
                 currentSlideIndex = Math.max(0, currentDeck.getSlideCount() - 1);
             }
             displaySlide(currentSlideIndex, false, true);
@@ -212,6 +225,10 @@ public class SlideMdApp extends Application {
         SlideView nextView = new SlideView(targetSlide, baseDir, ffmpegService, parser);
 
         appTitleBar.updateCounter(index, currentDeck.getSlideCount());
+
+        if (floatingEditor != null && floatingEditor.isVisible()) {
+            floatingEditor.scrollToSlide(index);
+        }
 
         if (!animated || currentSlideView == null) {
             if (currentSlideView != null) {
@@ -263,7 +280,7 @@ public class SlideMdApp extends Application {
     }
 
     public void toggleEditor() {
-        floatingEditor.toggleWindow();
+        floatingEditor.toggleWindow(currentSlideIndex);
     }
 
     public void toggleFullscreen() {
