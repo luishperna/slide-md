@@ -56,7 +56,6 @@ public class WelcomeView extends VBox {
                 "Ctrl + O",
                 onOpenPresentation
         );
-
         cardsBox.getChildren().addAll(newCard, openCard);
 
         // 3. Drag & Drop Helper

@@ -297,8 +297,24 @@ public class FloatingEditorWindow {
             }
         } catch (Exception ignored) {}
 
-        // Atalhos de teclado: Esc fecha popups primeiro, depois janela. Ctrl+S salva. Ctrl+Space abre autocomplete.
+        // Atalhos de teclado: navegação no autocomplete (Setas, Enter, Tab), Esc, Ctrl+S e Ctrl+Space
         scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (autocompletePopup.isShowing()) {
+                if (event.getCode() == KeyCode.DOWN) {
+                    autocompletePopup.selectNext();
+                    event.consume();
+                    return;
+                } else if (event.getCode() == KeyCode.UP) {
+                    autocompletePopup.selectPrevious();
+                    event.consume();
+                    return;
+                } else if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.TAB) {
+                    autocompletePopup.commitSelected();
+                    event.consume();
+                    return;
+                }
+            }
+
             if (event.getCode() == KeyCode.ESCAPE) {
                 if (colorPickerPopup.isShowing()) {
                     colorPickerPopup.hide();
@@ -405,7 +421,7 @@ public class FloatingEditorWindow {
     }
 
     private void openDirectivesManual() {
-        showAutocompleteAtCaret(DirectiveAutocompletePopup.DIRECTIVE_SUGGESTIONS);
+        showAutocompleteAtCaret(DirectiveAutocompletePopup.ALL_COMMANDS_AND_DIRECTIVES);
     }
 
     private void checkContextualAssistance() {
@@ -415,35 +431,72 @@ public class FloatingEditorWindow {
             int currentParagraph = codeArea.getCurrentParagraph();
             String lineText = codeArea.getParagraph(currentParagraph).getText();
             int col = codeArea.getCaretColumn();
-            String prefix = lineText.substring(0, Math.min(col, lineText.length())).trim().toLowerCase();
+            String textBeforeCaret = lineText.substring(0, Math.min(col, lineText.length()));
+
+            int tokenStart = Math.max(textBeforeCaret.lastIndexOf(' '), textBeforeCaret.lastIndexOf('\t')) + 1;
+            String token = textBeforeCaret.substring(tokenStart).trim();
 
             // 1. Detecta se digitou "bg:" para abrir o card de seleção de cores
-            if (prefix.equals("bg:") || prefix.startsWith("bg: ")) {
+            if (lineText.trim().toLowerCase().startsWith("bg:") || token.equalsIgnoreCase("bg:")) {
+                autocompletePopup.hide();
                 showColorPickerAtCaret();
                 return;
             }
 
-            // 2. Detecta se digitou "align:"
-            if (prefix.equals("align:") || prefix.equals("align: ")) {
+            // 2. Se a linha já contém diretiva com ':', autocompleta valores
+            if (lineText.contains(":")) {
                 colorPickerPopup.hide();
-                showAutocompleteAtCaret(DirectiveAutocompletePopup.ALIGN_VALUES);
+                String dirName = lineText.substring(0, lineText.indexOf(':')).trim().toLowerCase();
+                String valQuery = lineText.substring(lineText.indexOf(':') + 1).trim().toLowerCase();
+
+                if (dirName.equals("align")) {
+                    filterAndShowSuggestions(DirectiveAutocompletePopup.ALIGN_VALUES, valQuery);
+                    return;
+                } else if (dirName.equals("transition")) {
+                    filterAndShowSuggestions(DirectiveAutocompletePopup.TRANSITION_VALUES, valQuery);
+                    return;
+                } else if (dirName.equals("loop") || dirName.equals("autoplay")) {
+                    filterAndShowSuggestions(DirectiveAutocompletePopup.BOOLEAN_VALUES, valQuery);
+                    return;
+                }
+            }
+
+            // 3. Comandos slash estilo VS Code / Notion (iniciados por '/')
+            if (token.startsWith("/")) {
+                colorPickerPopup.hide();
+                String slashQuery = token.substring(1).toLowerCase().trim();
+                filterAndShowSuggestions(DirectiveAutocompletePopup.ALL_COMMANDS_AND_DIRECTIVES, slashQuery);
                 return;
             }
 
-            // 3. Detecta se digitou "transition:"
-            if (prefix.equals("transition:") || prefix.equals("transition: ")) {
+            // 4. Digitação de palavras de diretivas no slide (ex: 'al', 'bg', 'tr', 'vi', 'lo', 'cu', 'sl')
+            if (!token.isEmpty() && token.length() <= 12 && !token.startsWith("#") && !token.startsWith("-") && !token.startsWith("`")) {
                 colorPickerPopup.hide();
-                showAutocompleteAtCaret(DirectiveAutocompletePopup.TRANSITION_VALUES);
+                filterAndShowSuggestions(DirectiveAutocompletePopup.ALL_COMMANDS_AND_DIRECTIVES, token.toLowerCase());
                 return;
             }
 
-            // 4. Detecta se digitou "loop:" ou "autoplay:"
-            if (prefix.equals("loop:") || prefix.equals("loop: ") || prefix.equals("autoplay:") || prefix.equals("autoplay: ")) {
-                colorPickerPopup.hide();
-                showAutocompleteAtCaret(DirectiveAutocompletePopup.BOOLEAN_VALUES);
-                return;
-            }
+            autocompletePopup.hide();
         } catch (Exception ignored) {}
+    }
+
+    private void filterAndShowSuggestions(java.util.List<DirectiveAutocompletePopup.SuggestionItem> allItems, String query) {
+        if (query == null || query.isBlank()) {
+            showAutocompleteAtCaret(allItems);
+            return;
+        }
+
+        java.util.List<DirectiveAutocompletePopup.SuggestionItem> filtered = allItems.stream()
+                .filter(item -> item.displayText().toLowerCase().contains(query)
+                        || item.insertText().toLowerCase().contains(query)
+                        || item.description().toLowerCase().contains(query))
+                .toList();
+
+        if (!filtered.isEmpty()) {
+            showAutocompleteAtCaret(filtered);
+        } else {
+            autocompletePopup.hide();
+        }
     }
 
     private void showColorPickerAtCaret() {
@@ -470,15 +523,15 @@ public class FloatingEditorWindow {
             }
         } catch (Exception ignored) {}
 
-        // Garante que o card cabe na tela visível
+        // Garante que o card cabe na tela visível sem corte
         try {
             Screen screen = Screen.getPrimary();
             Rectangle2D bounds = screen.getVisualBounds();
-            if (screenX + 310 > bounds.getMaxX()) {
-                screenX = bounds.getMaxX() - 320;
+            if (screenX + 480 > bounds.getMaxX()) {
+                screenX = bounds.getMaxX() - 490;
             }
-            if (screenY + 280 > bounds.getMaxY()) {
-                screenY = screenY - 290;
+            if (screenY + 300 > bounds.getMaxY()) {
+                screenY = screenY - 310;
             }
         } catch (Exception ignored) {}
 
@@ -490,12 +543,10 @@ public class FloatingEditorWindow {
         String line = codeArea.getParagraph(currentParagraph).getText();
 
         if (line.trim().toLowerCase().startsWith("bg:")) {
-            // Substitui o valor da linha atual
             int start = codeArea.getAbsolutePosition(currentParagraph, 0);
             int end = codeArea.getAbsolutePosition(currentParagraph, line.length());
             codeArea.replaceText(start, end, "bg: " + colorValue);
         } else {
-            // Aplica no slide atual via helper
             int caret = codeArea.getCaretPosition();
             String currentText = codeArea.getText();
             String updated = SlideEditorHelper.applyBackgroundToCurrentSlide(currentText, caret, colorValue);
@@ -509,22 +560,29 @@ public class FloatingEditorWindow {
 
     private void applySuggestionToEditor(DirectiveAutocompletePopup.SuggestionItem item) {
         int currentParagraph = codeArea.getCurrentParagraph();
-        String line = codeArea.getParagraph(currentParagraph).getText();
+        String lineText = codeArea.getParagraph(currentParagraph).getText();
+        int col = codeArea.getCaretColumn();
+        String textBeforeCaret = lineText.substring(0, Math.min(col, lineText.length()));
 
-        if (item.insertText().equals("bg: ")) {
-            codeArea.insertText(codeArea.getCaretPosition(), "bg: ");
-            showColorPickerAtCaret();
-            return;
-        }
-
-        if (line.trim().contains(":")) {
-            // Substitui valor após os dois pontos
-            int colonIdx = line.indexOf(':');
+        if (item.typeBadge().equals("VALOR") && lineText.contains(":")) {
+            int colonIdx = lineText.indexOf(':');
             int start = codeArea.getAbsolutePosition(currentParagraph, colonIdx + 1);
-            int end = codeArea.getAbsolutePosition(currentParagraph, line.length());
+            int end = codeArea.getAbsolutePosition(currentParagraph, lineText.length());
             codeArea.replaceText(start, end, " " + item.insertText());
         } else {
-            codeArea.insertText(codeArea.getCaretPosition(), item.insertText());
+            int tokenStart = Math.max(textBeforeCaret.lastIndexOf(' '), textBeforeCaret.lastIndexOf('\t')) + 1;
+            String token = textBeforeCaret.substring(tokenStart);
+
+            int caret = codeArea.getCaretPosition();
+            int replaceStart = caret - token.length();
+            int replaceEnd = caret;
+
+            codeArea.replaceText(replaceStart, replaceEnd, item.insertText());
+
+            if (item.insertText().equals("bg: ")) {
+                showColorPickerAtCaret();
+                return;
+            }
         }
 
         codeArea.requestFocus();
