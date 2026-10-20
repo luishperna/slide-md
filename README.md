@@ -110,20 +110,20 @@ video: ./assets/roadster-video.mp4 [00:30-00:41]
 *Clique para reproduzir o clipe*
 ```
 
-### Diretivas Oficiais Suportadas:
-- `background`:
-  - **Gradiente em colchetes**: `[#1e293b, #0f172a, 45%]` ou `[#1e293b, #0f172a]`
-  - **Cor sólida**: `#0f172a` ou `rgb(15, 23, 42)`
-  - **Imagem de fundo**: `url(./assets/foto.jpg)` ou `./assets/foto.jpg`
-- `alignment`: `left`, `center`, `right`, `top` ou `down`
-- `transition`: `morph` (scroll contínuo conectado), `slide` (deslizamento clássico), `fade` (crossfade suave) ou `zoom`
-- `video`: Caminho do arquivo de vídeo `.mp4`. Pode ser inserido no topo ou no corpo do slide:
-  - **Corte inline**: adicione o intervalo entre colchetes (ex.: `video: demo.mp4 [00:10-00:30]`)
-  - **Junção**: separe múltiplos arquivos por vírgula (ex.: `video: v1.mp4, v2.mp4`)
-  - **Reprodução**: O vídeo entra pausado no primeiro frame; o clique para frente inicia a reprodução e o próximo clique avança o slide
-- `image`: Caminho da imagem em destaque ou inline (`image: ./assets/diagrama.png`)
-- `color`: Cor temática principal para títulos e marcadores de tópicos (`#ef4444`, `#38bdf8`, etc.). Clareia harmoniosamente conforme o nível de `#` (H2, H3...) aumenta
-- `sound`: Caminho ou URL de áudio/música de fundo (`.mp3`, `.wav`, `.aac`)
+### 📋 Diretivas Oficiais Suportadas
+
+| Diretiva | Formato / Sintaxe | Descrição |
+| :--- | :--- | :--- |
+| `background` | `[#1e293b, #0f172a, 45%]`<br>`#0f172a`<br>`url(./assets/foto.jpg)` | Define o fundo com gradiente em colchetes (`[cor1, cor2, angulo/direcao]`), cor sólida hexadecimal/RGB ou imagem de fundo. |
+| `alignment` | `left`, `center`, `right`, `top`, `down` | Define o alinhamento do conteúdo textual e visual no slide. |
+| `transition` | `morph`, `slide`, `fade`, `zoom` | Efeito de transição fluida a 60 FPS. `morph` conecta os slides em um scroll contínuo e orgânico. |
+| `video` | `video: demo.mp4 [00:10-00:30]`<br>`video: v1.mp4, v2.mp4` | Insere vídeo `.mp4` no topo ou corpo do slide. Suporta cortes inline (`[inicio-fim]`) e junção por vírgula. Entra pausado e inicia no clique. |
+| `image` | `image: ./assets/diagrama.png` | Exibe imagem em destaque ou inserida inline entre blocos de conteúdo. |
+| `color` | `#38bdf8`, `#ef4444`, `cyan` | Cor temática principal para títulos e marcadores (`•`). Clareia gradualmente para tons pastéis em cabeçalhos menores (H2, H3...). |
+| `sound` | `sound: ./assets/trilha.mp3` | Faixa de áudio/música de fundo associada ao slide (`.mp3`, `.wav`, `.aac`). |
+
+> **Dica**: As diretivas podem ser escritas diretamente no topo do slide (`chave: valor`) ou envolvidas em comentários HTML (`<!-- chave: valor -->`), funcionando tanto no frontmatter global quanto em qualquer slide individual.
+
 
 ---
 

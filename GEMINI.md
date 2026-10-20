@@ -106,21 +106,19 @@ video: ./assets/demo.mp4 [00:05-00:25]
 - O vídeo entra pausado e toca ao dar mais um clique para frente
 ```
 
-### Diretivas Suportadas (5 Diretrizes Oficiais Limpas):
-- `background`:
-  - **Gradiente em colchetes**: `[#1e293b, #segunda_cor, #terceira_cor, porcentagem_da_direcao]` (ex.: `[#1e293b, #0f172a, 45%]`, `[#1e293b, #0f172a, 50%]`, `[#1e293b, #0f172a, to right]` ou simplesmente `[#1e293b, #0f172a]`).
-  - Cor hexadecimal sólida (`#1e293b`) ou imagem (`url(foto.jpg)` ou `./foto.jpg`).
-- `alignment`: `center`, `left`, `right`, `top`, `down` (aceita também `bottom` e `up`).
-- `transition`: `morph` (scroll contínuo e orgânico onde os slides e elementos deslizam conectados), `slide` (deslizamento clássico), `fade` (crossfade), `zoom` (zoom sutil).
-- `video`: Caminho do arquivo de vídeo `.mp4`.
-  - **Corte inline**: adicione o intervalo entre colchetes na frente do arquivo (ex.: `video: demo.mp4 [00:10-00:45]`).
-  - **Junção**: separe múltiplos vídeos por vírgula na mesma linha (ex.: `video: v1.mp4, v2.mp4`).
-  - **Reprodução**: O vídeo não toca sozinho (autoplay sempre falso). O primeiro clique para frente inicia o vídeo; o próximo clique avança para o slide seguinte.
-  - **Ciclo**: Toca uma vez até o fim (loop sempre falso).
-- `image`: Caminho relativo ou URL da imagem do slide ou inline (`image: ./assets/foto.jpg`).
-- `color`: Cor temática principal para títulos e marcadores de tópicos (`#ef4444`, `#38bdf8`, `red`). Conforme a quantidade de `#` aumenta (H2, H3...), a cor clareia suavemente em direção ao branco/tom pastel. O ponto do tópico (`•`) recebe a cor base.
-- `sound`: Caminho relativo, absoluto ou URL para arquivo de áudio de fundo (`.mp3`, `.wav`, `.aac`). Loop sempre falso e volume padrão normalizado em 1.0.
-- **Comentários HTML**: `<!-- background: [#1e293b, #0f172a] -->` continuam suportados para configurar o slide sem aparecer na apresentação.
+### Diretivas Oficiais Suportadas:
+
+| Diretiva | Formato / Sintaxe | Descrição |
+| :--- | :--- | :--- |
+| `background` | `[#1e293b, #0f172a, 45%]`<br>`#1e293b`<br>`url(foto.jpg)` | Gradiente em colchetes (`[cor1, cor2, ...]`), cor sólida hexadecimal ou imagem. |
+| `alignment` | `left`, `center`, `right`, `top`, `down` | Alinhamento do conteúdo (aceita também `bottom` e `up`). |
+| `transition` | `morph`, `slide`, `fade`, `zoom` | Transição entre slides. `morph` realiza scroll contínuo e orgânico onde elementos deslizam conectados. |
+| `video` | `video: demo.mp4 [00:10-00:45]`<br>`video: v1.mp4, v2.mp4` | Caminho do vídeo `.mp4`. Suporta corte inline entre colchetes e concatenação por vírgula. Toca ao avançar e não possui loop. |
+| `image` | `image: ./assets/foto.jpg` | Caminho relativo ou URL da imagem do slide ou inline. |
+| `color` | `#38bdf8`, `#ef4444`, `red` | Cor temática principal para títulos e marcadores (`•`). Clareia suavemente conforme o nível de `#` (H2, H3...). |
+| `sound` | `sound: ./audio/tema.mp3` | Áudio de fundo (`.mp3`, `.wav`, `.aac`) com volume normalizado. |
+
+> **Nota**: Comentários HTML como `<!-- background: [#1e293b, #0f172a] -->` continuam suportados para configurar o slide sem poluir a apresentação.
 
 ---
 
