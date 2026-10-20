@@ -11,6 +11,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.SVGPath;
 import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
@@ -27,6 +28,9 @@ public class AppTitleBar extends HBox {
     private final Button nextBtn;
     private final SVGPath prevIcon;
     private final SVGPath nextIcon;
+    private final Button penBtn;
+    private final SVGPath penIcon;
+    private boolean penActive = false;
     private final Label counterLabel;
     private final HBox navGroup;
 
@@ -35,6 +39,7 @@ public class AppTitleBar extends HBox {
 
     public AppTitleBar(Stage stage, String initialTitle,
                        Runnable onNewFile, Runnable onOpenFile, Runnable onToggleEditor,
+                       Runnable onTogglePen,
                        Runnable onPrevSlide, Runnable onNextSlide) {
         setAlignment(Pos.CENTER_LEFT);
         setPrefHeight(38);
@@ -83,6 +88,10 @@ public class AppTitleBar extends HBox {
         dockDivider.setFont(Font.font("Segoe UI", 12));
         HBox.setMargin(dockDivider, new Insets(0, 4, 0, 4));
 
+        penIcon = createPenIcon();
+        penBtn = createDockButton(penIcon, "Caneta / Rastro Laser (P)", onTogglePen);
+        setupPenButtonBehavior();
+
         prevIcon = createLeftChevron();
         prevBtn = createDockButton(prevIcon, "Slide Anterior (Seta Esquerda / Clique à Esquerda)", onPrevSlide);
 
@@ -94,7 +103,7 @@ public class AppTitleBar extends HBox {
         nextIcon = createRightChevron();
         nextBtn = createDockButton(nextIcon, "Próximo Slide (Seta Direita / Espaço / Clique à Direita)", onNextSlide);
 
-        navGroup = new HBox(4, dockDivider, prevBtn, counterLabel, nextBtn);
+        navGroup = new HBox(4, dockDivider, penBtn, prevBtn, counterLabel, nextBtn);
         navGroup.setAlignment(Pos.CENTER);
         navGroup.setVisible(false);
         navGroup.setManaged(false);
@@ -173,6 +182,39 @@ public class AppTitleBar extends HBox {
         nextIcon.setStroke(currentSlide >= totalSlides - 1 ? Color.web("#404040") : Color.web("#d4d4d4"));
     }
 
+    public void setPenActive(boolean active) {
+        this.penActive = active;
+        updatePenButtonStyle();
+    }
+
+    public boolean isPenActive() {
+        return penActive;
+    }
+
+    private void setupPenButtonBehavior() {
+        penBtn.setOnMouseEntered(e -> {
+            if (penActive) {
+                penBtn.setStyle("-fx-background-color: rgba(255, 255, 255, 0.22); -fx-background-radius: 4px; -fx-cursor: hand; -fx-padding: 0; -fx-border-color: #ffffff; -fx-border-width: 1px; -fx-border-radius: 4px;");
+                penIcon.setStroke(Color.WHITE);
+            } else {
+                penBtn.setStyle("-fx-background-color: #262626; -fx-background-radius: 4px; -fx-cursor: hand; -fx-padding: 0;");
+                penIcon.setStroke(Color.WHITE);
+            }
+        });
+        penBtn.setOnMouseExited(e -> updatePenButtonStyle());
+    }
+
+    private void updatePenButtonStyle() {
+        if (penBtn == null || penIcon == null) return;
+        if (penActive) {
+            penBtn.setStyle("-fx-background-color: rgba(255, 255, 255, 0.14); -fx-background-radius: 4px; -fx-cursor: hand; -fx-padding: 0; -fx-border-color: rgba(255, 255, 255, 0.85); -fx-border-width: 1px; -fx-border-radius: 4px;");
+            penIcon.setStroke(Color.WHITE);
+        } else {
+            penBtn.setStyle("-fx-background-color: transparent; -fx-background-radius: 4px; -fx-cursor: hand; -fx-padding: 0;");
+            penIcon.setStroke(Color.web("#a3a3a3"));
+        }
+    }
+
     public void setNavigationVisible(boolean visible) {
         navGroup.setVisible(visible);
         navGroup.setManaged(visible);
@@ -192,11 +234,13 @@ public class AppTitleBar extends HBox {
 
     private Button createDockButton(SVGPath icon, String tooltipText, Runnable action) {
         Button btn = new Button();
+        icon.setScaleX(1.22);
+        icon.setScaleY(1.22);
         btn.setGraphic(icon);
-        btn.setPrefWidth(28);
-        btn.setPrefHeight(26);
-        btn.setMinHeight(26);
-        btn.setMaxHeight(26);
+        btn.setPrefWidth(32);
+        btn.setPrefHeight(28);
+        btn.setMinHeight(28);
+        btn.setMaxHeight(28);
         btn.setAlignment(Pos.CENTER);
 
         String baseStyle = "-fx-background-color: transparent;" +
@@ -236,7 +280,7 @@ public class AppTitleBar extends HBox {
         SVGPath path = new SVGPath();
         path.setContent("M 2 1.5 L 6.5 1.5 L 9.5 4.5 L 9.5 11.5 L 2 11.5 Z M 6.5 1.5 L 6.5 4.5 L 9.5 4.5 M 4 7.5 L 7.5 7.5 M 5.75 5.75 L 5.75 9.25");
         path.setStroke(Color.web("#a3a3a3"));
-        path.setStrokeWidth(1.15);
+        path.setStrokeWidth(1.25);
         path.setStrokeLineCap(StrokeLineCap.ROUND);
         path.setFill(Color.TRANSPARENT);
         return path;
@@ -246,7 +290,7 @@ public class AppTitleBar extends HBox {
         SVGPath path = new SVGPath();
         path.setContent("M 1.5 2.5 L 4.5 2.5 L 6 4 L 10.5 4 L 10.5 10.5 L 1.5 10.5 Z");
         path.setStroke(Color.web("#a3a3a3"));
-        path.setStrokeWidth(1.15);
+        path.setStrokeWidth(1.25);
         path.setStrokeLineCap(StrokeLineCap.ROUND);
         path.setFill(Color.TRANSPARENT);
         return path;
@@ -256,8 +300,19 @@ public class AppTitleBar extends HBox {
         SVGPath path = new SVGPath();
         path.setContent("M 1.5 10.5 L 4 10.5 L 10.5 4 L 8 1.5 L 1.5 8 Z M 7 2.5 L 9.5 5");
         path.setStroke(Color.web("#a3a3a3"));
-        path.setStrokeWidth(1.15);
+        path.setStrokeWidth(1.25);
         path.setStrokeLineCap(StrokeLineCap.ROUND);
+        path.setFill(Color.TRANSPARENT);
+        return path;
+    }
+
+    private SVGPath createPenIcon() {
+        SVGPath path = new SVGPath();
+        path.setContent("M 9.5 2 L 11 3.5 L 4.5 10 L 2 10.5 L 2.5 8 Z M 8 3.5 L 9.5 5");
+        path.setStroke(Color.web("#a3a3a3"));
+        path.setStrokeWidth(1.25);
+        path.setStrokeLineCap(StrokeLineCap.ROUND);
+        path.setStrokeLineJoin(StrokeLineJoin.ROUND);
         path.setFill(Color.TRANSPARENT);
         return path;
     }
@@ -266,7 +321,7 @@ public class AppTitleBar extends HBox {
         SVGPath path = new SVGPath();
         path.setContent("M 6.5 2 L 2.5 6 L 6.5 10");
         path.setStroke(Color.web("#d4d4d4"));
-        path.setStrokeWidth(1.4);
+        path.setStrokeWidth(1.5);
         path.setStrokeLineCap(StrokeLineCap.ROUND);
         path.setFill(Color.TRANSPARENT);
         return path;
@@ -276,7 +331,7 @@ public class AppTitleBar extends HBox {
         SVGPath path = new SVGPath();
         path.setContent("M 3.5 2 L 7.5 6 L 3.5 10");
         path.setStroke(Color.web("#d4d4d4"));
-        path.setStrokeWidth(1.4);
+        path.setStrokeWidth(1.5);
         path.setStrokeLineCap(StrokeLineCap.ROUND);
         path.setFill(Color.TRANSPARENT);
         return path;

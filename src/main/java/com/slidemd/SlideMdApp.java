@@ -1,22 +1,30 @@
 package com.slidemd;
 
 import com.slidemd.animation.TransitionManager;
+import com.slidemd.audio.AudioManager;
+import com.slidemd.model.CommandLineOptions;
+import com.slidemd.model.RecentFilesManager;
 import com.slidemd.model.Slide;
 import com.slidemd.model.SlideDeck;
 import com.slidemd.parser.MarkdownSlideParser;
 import com.slidemd.ui.AppTitleBar;
-import com.slidemd.ui.FloatingEditorWindow;
+import com.slidemd.ui.LaserPenOverlay;
+import com.slidemd.ui.SideEditorPanel;
 import com.slidemd.ui.SlideEditorHelper;
 import com.slidemd.ui.SlideView;
 import com.slidemd.ui.WelcomeView;
 import com.slidemd.ui.WindowResizeHelper;
 import com.slidemd.video.FFmpegService;
+import javafx.animation.Interpolator;
+import javafx.animation.Transition;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
+import javafx.scene.control.SplitPane;
+import javafx.util.Duration;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -43,17 +51,27 @@ public class SlideMdApp extends Application {
     private final MarkdownSlideParser parser = new MarkdownSlideParser();
     private final FFmpegService ffmpegService = new FFmpegService();
     private final TransitionManager transitionManager = new TransitionManager();
+    private final AudioManager audioManager = new AudioManager();
 
     private Stage primaryStage;
     private AppTitleBar appTitleBar;
     private StackPane rootLayout;
     private StackPane slideContainer;
-    private FloatingEditorWindow floatingEditor;
+    private LaserPenOverlay laserPenOverlay;
+    private StackPane presentationArea;
+    private SplitPane splitPane;
+    private SideEditorPanel editorPanel;
+    private double lastDividerPosition = 0.62;
+    private Transition editorTransition;
 
     private SlideDeck currentDeck;
     private int currentSlideIndex = 0;
     private SlideView currentSlideView;
     private File loadedFile;
+
+    private String cliMusicPath;
+    private boolean cliMusicLoop = true;
+    private double cliMusicVolume = 0.8;
 
     @Override
     public void start(Stage stage) {
@@ -63,21 +81,28 @@ public class SlideMdApp extends Application {
 
         BorderPane mainContainer = new BorderPane();
         mainContainer.setStyle("-fx-background-color: #101010;");
+        mainContainer.setMinSize(0, 0);
+
+        laserPenOverlay = new LaserPenOverlay(this::prevSlide, this::nextSlide);
 
         // Custom Top Title Bar with Centralized Dock and Navigation
         appTitleBar = new AppTitleBar(stage, null,
                 this::createNewPresentation, this::openFileDialog, this::toggleEditor,
+                this::toggleLaserPen,
                 this::prevSlide, this::nextSlide);
         mainContainer.setTop(appTitleBar);
 
         rootLayout = new StackPane();
         rootLayout.setStyle("-fx-background-color: #101010;");
+        rootLayout.setMinSize(0, 0);
         mainContainer.setCenter(rootLayout);
 
         // Slide Container with Click Navigation (left half = back, right half = next)
         slideContainer = new StackPane();
         slideContainer.setAlignment(Pos.CENTER);
+        slideContainer.setMinSize(0, 0);
         slideContainer.setOnMouseClicked(event -> {
+            if (laserPenOverlay != null && laserPenOverlay.isActive()) return;
             if (currentDeck == null || currentDeck.getSlideCount() == 0) return;
             if (event.getButton() != MouseButton.PRIMARY) return;
 
@@ -88,12 +113,53 @@ public class SlideMdApp extends Application {
                 nextSlide();
             }
         });
-        rootLayout.getChildren().add(slideContainer);
 
-        // Setup Standalone Floating Editor Window (opens outside presentation with two-way sync)
-        floatingEditor = new FloatingEditorWindow(stage, this::onEditorContentChanged, this::savePresentation, this::onEditorSlideNavigated);
+        presentationArea = new StackPane(slideContainer, laserPenOverlay);
+        presentationArea.setAlignment(Pos.CENTER);
+        presentationArea.setMinSize(0, 0);
 
-        Scene scene = new Scene(mainContainer, 1280, 720);
+        // Setup Side Editor Panel integrated into the window (VS Code sidebar style)
+        editorPanel = new SideEditorPanel(
+                this::onEditorContentChanged,
+                this::savePresentation,
+                this::onEditorSlideNavigated,
+                this::closeEditor
+        );
+
+        splitPane = new SplitPane();
+        splitPane.setStyle("-fx-box-border: transparent; -fx-background-color: #101010; -fx-padding: 0;");
+        splitPane.setMinSize(0, 0);
+        SplitPane.setResizableWithParent(presentationArea, true);
+        SplitPane.setResizableWithParent(editorPanel.getPanelNode(), false);
+
+        // Fecha o editor se o usuário soltar o divisor perto da borda direita
+        splitPane.setOnMouseReleased(event -> {
+            if (isEditorOpen() && editorTransition == null) {
+                double[] pos = splitPane.getDividerPositions();
+                if (pos.length > 0 && pos[0] >= 0.92) {
+                    closeEditor();
+                }
+            }
+        });
+
+        // Fecha o editor se o painel for arrastado/espremido para menos de 60px de largura
+        editorPanel.getPanelNode().widthProperty().addListener((obs, oldW, newW) -> {
+            if (isEditorOpen() && editorTransition == null && newW.doubleValue() > 0 && newW.doubleValue() < 60) {
+                closeEditor();
+            }
+        });
+
+        splitPane.getItems().setAll(presentationArea);
+        rootLayout.getChildren().add(splitPane);
+
+        StackPane windowRoot = new StackPane(mainContainer);
+        Scene scene = new Scene(windowRoot, 1280, 720);
+        try {
+            var cssUrl = getClass().getResource("/css/markdown-editor.css");
+            if (cssUrl != null) {
+                scene.getStylesheets().add(cssUrl.toExternalForm());
+            }
+        } catch (Exception ignored) {}
         setupKeyHandlers(scene);
         setupDragAndDrop(scene);
         WindowResizeHelper.addResizeListener(stage, scene);
@@ -123,8 +189,8 @@ public class SlideMdApp extends Application {
 
         stage.setTitle("slide-md");
         stage.setScene(scene);
-        stage.setMinWidth(800);
-        stage.setMinHeight(500);
+        stage.setMinWidth(640);
+        stage.setMinHeight(340);
 
         // Open Welcome Screen by default, or load CLI argument file
         loadInitialPresentation();
@@ -133,20 +199,34 @@ public class SlideMdApp extends Application {
     }
 
     private void loadInitialPresentation() {
-        var args = getParameters().getRaw();
-        if (!args.isEmpty()) {
-            File targetFile = new File(args.get(0));
-            if (targetFile.exists()) {
-                loadFile(targetFile);
-                return;
-            }
+        var rawArgs = getParameters().getRaw();
+        var namedArgs = getParameters().getNamed();
+        CommandLineOptions options = CommandLineOptions.parse(rawArgs, namedArgs);
+
+        if (options.musicPath() != null && !options.musicPath().isBlank()) {
+            this.cliMusicPath = options.musicPath();
+            this.cliMusicLoop = options.musicLoop();
+            this.cliMusicVolume = options.musicVolume();
         }
+
+        if (options.markdownFile() != null && options.markdownFile().exists()) {
+            loadFile(options.markdownFile());
+            return;
+        }
+
         showWelcomeScreen();
+
+        if (this.cliMusicPath != null) {
+            audioManager.syncMusic(this.cliMusicPath, new File("."), this.cliMusicLoop, this.cliMusicVolume);
+        }
     }
 
     public void showWelcomeScreen() {
         this.currentDeck = null;
         this.loadedFile = null;
+        if (laserPenOverlay != null && laserPenOverlay.isActive()) {
+            toggleLaserPen();
+        }
         primaryStage.setTitle("slide-md");
         if (appTitleBar != null) {
             appTitleBar.setTitle(null);
@@ -157,7 +237,10 @@ public class SlideMdApp extends Application {
             currentSlideView.dispose();
             currentSlideView = null;
         }
-        WelcomeView welcomeView = new WelcomeView(this::createNewPresentation, this::openFileDialog);
+        if (cliMusicPath == null) {
+            audioManager.stop();
+        }
+        WelcomeView welcomeView = new WelcomeView(this::createNewPresentation, this::openFileDialog, this::loadFile);
         slideContainer.getChildren().setAll(welcomeView);
         slideContainer.setCursor(Cursor.DEFAULT);
     }
@@ -166,15 +249,19 @@ public class SlideMdApp extends Application {
         try {
             this.loadedFile = file;
             this.currentDeck = parser.parseFile(file);
+            RecentFilesManager.addRecentFile(file);
             primaryStage.setTitle("slide-md — " + currentDeck.getTitle());
             if (appTitleBar != null) {
                 appTitleBar.setTitle(currentDeck.getTitle());
                 appTitleBar.setNavigationVisible(true);
             }
-            floatingEditor.setMarkdownContent(Files.readString(file.toPath(), StandardCharsets.UTF_8));
+            editorPanel.setMarkdownContent(Files.readString(file.toPath(), StandardCharsets.UTF_8));
             currentSlideIndex = 0;
             slideContainer.setCursor(Cursor.HAND);
             displaySlide(currentSlideIndex, false, true);
+            if (isEditorOpen()) {
+                editorPanel.scrollToSlide(0);
+            }
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Erro ao carregar arquivo: " + file.getAbsolutePath(), e);
             showWelcomeScreen();
@@ -197,7 +284,7 @@ public class SlideMdApp extends Application {
             updatedDeck.setSourceFile(loadedFile);
             this.currentDeck = updatedDeck;
 
-            int editingSlide = SlideEditorHelper.getSlideIndexAtCaret(newMarkdown, floatingEditor.getCaretPosition());
+            int editingSlide = SlideEditorHelper.getSlideIndexAtCaret(newMarkdown, editorPanel.getCaretPosition());
             if (editingSlide >= 0 && editingSlide < currentDeck.getSlideCount()) {
                 currentSlideIndex = editingSlide;
             } else if (currentSlideIndex >= currentDeck.getSlideCount()) {
@@ -219,6 +306,10 @@ public class SlideMdApp extends Application {
     private void displaySlide(int index, boolean animated, boolean forward) {
         if (currentDeck == null || currentDeck.getSlideCount() == 0) return;
         if (index < 0 || index >= currentDeck.getSlideCount()) return;
+
+        if (laserPenOverlay != null) {
+            laserPenOverlay.clear();
+        }
 
         Slide targetSlide = currentDeck.getSlide(index);
         File baseDir = loadedFile != null ? loadedFile.getParentFile() : new File(".");
@@ -242,15 +333,52 @@ public class SlideMdApp extends Application {
                 currentSlideView = nextView;
             });
         }
+
+        // Sincroniza reprodução de áudio / música de fundo
+        updateAudioPlayback(targetSlide, baseDir);
+    }
+
+    public void toggleLaserPen() {
+        if (laserPenOverlay == null) return;
+        boolean newState = !laserPenOverlay.isActive();
+        laserPenOverlay.setActive(newState);
+        if (appTitleBar != null) {
+            appTitleBar.setPenActive(newState);
+        }
+    }
+
+    private void updateAudioPlayback(Slide targetSlide, File baseDir) {
+        String effectiveMusic = null;
+        boolean loop = true;
+        double volume = 1.0;
+
+        if (targetSlide != null && targetSlide.getMusic() != null) {
+            effectiveMusic = targetSlide.getMusic();
+            loop = targetSlide.isMusicLoop() != null ? targetSlide.isMusicLoop() : true;
+            volume = targetSlide.getMusicVolume() != null ? targetSlide.getMusicVolume() : 1.0;
+        } else if (currentDeck != null && currentDeck.getMusic() != null) {
+            effectiveMusic = currentDeck.getMusic();
+            loop = currentDeck.isMusicLoop();
+            volume = currentDeck.getMusicVolume();
+        } else if (cliMusicPath != null && !cliMusicPath.isBlank()) {
+            effectiveMusic = cliMusicPath;
+            loop = cliMusicLoop;
+            volume = cliMusicVolume;
+        }
+
+        audioManager.syncMusic(effectiveMusic, baseDir, loop, volume);
     }
 
     public void nextSlide() {
         if (transitionManager.isAnimating()) return;
+        if (currentSlideView != null && currentSlideView.playVideoIfNotStarted()) {
+            return;
+        }
         if (currentDeck != null && currentSlideIndex < currentDeck.getSlideCount() - 1) {
             currentSlideIndex++;
             displaySlide(currentSlideIndex, true, true);
-            if (floatingEditor != null && floatingEditor.isVisible()) {
-                floatingEditor.scrollToSlide(currentSlideIndex);
+            if (editorPanel != null && isEditorOpen()) {
+                editorPanel.scrollToSlide(currentSlideIndex);
             }
         }
     }
@@ -260,8 +388,8 @@ public class SlideMdApp extends Application {
         if (currentDeck != null && currentSlideIndex > 0) {
             currentSlideIndex--;
             displaySlide(currentSlideIndex, true, false);
-            if (floatingEditor != null && floatingEditor.isVisible()) {
-                floatingEditor.scrollToSlide(currentSlideIndex);
+            if (editorPanel != null && isEditorOpen()) {
+                editorPanel.scrollToSlide(currentSlideIndex);
             }
         }
     }
@@ -271,8 +399,8 @@ public class SlideMdApp extends Application {
         if (currentSlideIndex != 0) {
             currentSlideIndex = 0;
             displaySlide(currentSlideIndex, true, false);
-            if (floatingEditor != null && floatingEditor.isVisible()) {
-                floatingEditor.scrollToSlide(currentSlideIndex);
+            if (editorPanel != null && isEditorOpen()) {
+                editorPanel.scrollToSlide(currentSlideIndex);
             }
         }
     }
@@ -283,14 +411,116 @@ public class SlideMdApp extends Application {
         if (currentSlideIndex != last) {
             currentSlideIndex = last;
             displaySlide(currentSlideIndex, true, true);
-            if (floatingEditor != null && floatingEditor.isVisible()) {
-                floatingEditor.scrollToSlide(currentSlideIndex);
+            if (editorPanel != null && isEditorOpen()) {
+                editorPanel.scrollToSlide(currentSlideIndex);
             }
         }
     }
 
     public void toggleEditor() {
-        floatingEditor.toggleWindow(currentSlideIndex);
+        toggleEditor(currentSlideIndex);
+    }
+
+    public void toggleEditor(int slideIndex) {
+        if (isEditorOpen()) {
+            closeEditor();
+        } else {
+            openEditor(slideIndex);
+        }
+    }
+
+    public boolean isEditorOpen() {
+        return splitPane != null && splitPane.getItems().contains(editorPanel.getPanelNode());
+    }
+
+    public void openEditor(int slideIndex) {
+        if (splitPane != null && !isEditorOpen()) {
+            if (editorTransition != null) {
+                editorTransition.stop();
+            }
+
+            splitPane.getItems().setAll(presentationArea, editorPanel.getPanelNode());
+            splitPane.applyCss();
+            splitPane.layout();
+            splitPane.setDividerPosition(0, 1.0);
+
+            double targetPos = (lastDividerPosition >= 0.25 && lastDividerPosition <= 0.85) ? lastDividerPosition : 0.62;
+
+            editorTransition = new Transition() {
+                {
+                    setCycleDuration(Duration.millis(140));
+                    setInterpolator(Interpolator.SPLINE(0.1, 0.9, 0.2, 1.0));
+                }
+
+                @Override
+                protected void interpolate(double frac) {
+                    double current = 1.0 - frac * (1.0 - targetPos);
+                    splitPane.setDividerPosition(0, current);
+                }
+            };
+
+            editorTransition.setOnFinished(e -> {
+                editorTransition = null;
+                splitPane.setDividerPosition(0, targetPos);
+                splitPane.applyCss();
+                splitPane.layout();
+                editorPanel.onOpened(slideIndex >= 0 ? slideIndex : currentSlideIndex);
+
+                if (!splitPane.getDividers().isEmpty()) {
+                    SplitPane.Divider divider = splitPane.getDividers().get(0);
+                    divider.positionProperty().addListener((obs, oldP, newP) -> {
+                        if (isEditorOpen() && editorTransition == null) {
+                            double p = newP.doubleValue();
+                            if (p >= 0.94) {
+                                closeEditor();
+                            } else if (p >= 0.20 && p <= 0.85) {
+                                lastDividerPosition = p;
+                            }
+                        }
+                    });
+                }
+            });
+
+            editorTransition.play();
+        } else if (isEditorOpen() && slideIndex >= 0) {
+            editorPanel.scrollToSlide(slideIndex);
+        }
+    }
+
+    public void closeEditor() {
+        if (isEditorOpen()) {
+            if (editorTransition != null) {
+                editorTransition.stop();
+            }
+
+            double[] pos = splitPane.getDividerPositions();
+            double startPos = (pos.length > 0 && pos[0] >= 0.25 && pos[0] <= 0.85) ? pos[0] : lastDividerPosition;
+            if (pos.length > 0 && pos[0] >= 0.25 && pos[0] <= 0.85) {
+                lastDividerPosition = pos[0];
+            }
+
+            editorTransition = new Transition() {
+                {
+                    setCycleDuration(Duration.millis(110));
+                    setInterpolator(Interpolator.SPLINE(0.8, 0.0, 0.9, 0.2));
+                }
+
+                @Override
+                protected void interpolate(double frac) {
+                    double current = startPos + frac * (1.0 - startPos);
+                    splitPane.setDividerPosition(0, current);
+                }
+            };
+
+            editorTransition.setOnFinished(e -> {
+                editorTransition = null;
+                editorPanel.onClosed();
+                splitPane.getItems().setAll(presentationArea);
+                presentationArea.requestFocus();
+            });
+
+            editorTransition.play();
+        }
     }
 
     public void toggleFullscreen() {
@@ -306,8 +536,8 @@ public class SlideMdApp extends Application {
     public void createNewPresentation() {
         String newTemplate = """
                 ---
-                bg: linear-gradient(to bottom right, #090d16, #1e293b)
-                align: center
+                background: [#090d16, #1e293b]
+                alignment: center
                 transition: morph
                 ---
 
@@ -317,8 +547,9 @@ public class SlideMdApp extends Application {
                 Pressione **M** para abrir o editor
 
                 ---
-                bg: #0f172a
-                align: left
+                background: #0f172a
+                alignment: left
+                transition: morph
 
                 ## Tópicos Principais
                 - Primeiro ponto importante
@@ -331,17 +562,18 @@ public class SlideMdApp extends Application {
             appTitleBar.setTitle("Nova Apresentação");
             appTitleBar.setNavigationVisible(true);
         }
-        floatingEditor.setMarkdownContent(newTemplate);
+        editorPanel.setMarkdownContent(newTemplate);
         currentSlideIndex = 0;
         slideContainer.setCursor(Cursor.HAND);
         displaySlide(0, false, true);
-        floatingEditor.showWindow();
+        openEditor(0);
     }
 
     public void savePresentation() {
         if (loadedFile != null && loadedFile.exists()) {
             try {
-                Files.writeString(loadedFile.toPath(), floatingEditor.getMarkdownContent(), StandardCharsets.UTF_8);
+                Files.writeString(loadedFile.toPath(), editorPanel.getMarkdownContent(), StandardCharsets.UTF_8);
+                RecentFilesManager.addRecentFile(loadedFile);
             } catch (IOException e) {
                 LOGGER.warning("Erro ao salvar arquivo: " + e.getMessage());
             }
@@ -353,7 +585,7 @@ public class SlideMdApp extends Application {
             File file = fileChooser.showSaveDialog(primaryStage);
             if (file != null) {
                 try {
-                    Files.writeString(file.toPath(), floatingEditor.getMarkdownContent(), StandardCharsets.UTF_8);
+                    Files.writeString(file.toPath(), editorPanel.getMarkdownContent(), StandardCharsets.UTF_8);
                     loadFile(file);
                 } catch (IOException e) {
                     LOGGER.severe("Erro ao salvar novo arquivo: " + e.getMessage());
@@ -409,6 +641,21 @@ public class SlideMdApp extends Application {
 
     private void setupKeyHandlers(Scene scene) {
         scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            // Se o foco está no editor e não for atalho com Ctrl, deixa o editor processar digitação normalmente
+            if (editorPanel != null && editorPanel.isFocused()) {
+                if (event.isShortcutDown() && event.getCode() == KeyCode.S) {
+                    savePresentation();
+                    event.consume();
+                } else if (event.isShortcutDown() && event.getCode() == KeyCode.O) {
+                    openFileDialog();
+                    event.consume();
+                } else if (event.isShortcutDown() && event.getCode() == KeyCode.N) {
+                    createNewPresentation();
+                    event.consume();
+                }
+                return;
+            }
+
             // Global shortcuts: Nova (Ctrl+N), Salvar (Ctrl+S), Abrir (Ctrl+O)
             if (event.isShortcutDown() && event.getCode() == KeyCode.N) {
                 createNewPresentation();
@@ -427,8 +674,11 @@ public class SlideMdApp extends Application {
             }
 
             if (event.getCode() == KeyCode.ESCAPE) {
-                if (floatingEditor.isVisible()) {
-                    floatingEditor.hideWindow();
+                if (laserPenOverlay != null && laserPenOverlay.isActive()) {
+                    toggleLaserPen();
+                    event.consume();
+                } else if (isEditorOpen()) {
+                    closeEditor();
                     event.consume();
                 } else if (primaryStage.isFullScreen()) {
                     primaryStage.setFullScreen(false);
@@ -462,13 +712,34 @@ public class SlideMdApp extends Application {
                     toggleEditor();
                     event.consume();
                 }
+                case P -> {
+                    toggleLaserPen();
+                    event.consume();
+                }
+                case C -> {
+                    if (laserPenOverlay != null && laserPenOverlay.isActive()) {
+                        laserPenOverlay.clear();
+                        event.consume();
+                    }
+                }
                 case R -> {
                     reloadPresentation();
+                    event.consume();
+                }
+                case U -> {
+                    audioManager.toggleMute();
                     event.consume();
                 }
                 default -> {}
             }
         });
+    }
+
+    @Override
+    public void stop() {
+        if (audioManager != null) {
+            audioManager.dispose();
+        }
     }
 
     public static void main(String[] args) {
