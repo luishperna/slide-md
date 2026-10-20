@@ -268,15 +268,6 @@ java -jar target/slide-md-1.0.0-SNAPSHOT.jar examples/demo.md
 
 ---
 
-## 🗺️ Roadmap para Próximas Versões
-
-- [ ] Lançamento oficial de instaladores nativos assinados (`.exe`, `.msi`, `.deb`, `.dmg`) via GitHub Actions.
-- [ ] Exportação de slides para **PDF de alta resolução** e **HTML estático interativo**.
-- [ ] Modo Moderador / Apresentador (*Presenter View*) com tela dupla para notas do orador e cronômetro.
-- [ ] Galeria de temas visuais minimalistas pré-configurados.
-- [ ] Suporte a equações matemáticas renderizadas via LaTeX/KaTeX.
-
----
 
 ## 📄 Licença
 
