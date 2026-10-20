@@ -1,18 +1,6 @@
 # slide-md ⚡
 
 <p align="center">
-  <video src="./assets/slide-md-demo.mp4" controls autoplay loop muted width="850" poster="./assets/demo-preview.png" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); max-width: 100%;">
-    <a href="./assets/slide-md-demo.mp4">
-      <img src="./assets/demo-preview.png" alt="slide-md Demonstração" width="850" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); max-width: 100%;" />
-    </a>
-  </video>
-</p>
-<p align="center">
-  <em>Demonstração em tempo real: navegação fluida, transições morph, caneta laser e editor integrado estilo VS Code.</em><br>
-  <a href="./assets/slide-md-demo.mp4">▶️ <strong>Assistir ao vídeo de demonstração em alta resolução (MP4)</strong></a>
-</p>
-
-<p align="center">
   <strong>Apresentador de slides desktop moderno, minimalista e fluido a 60 FPS direto do seu Markdown.</strong>
 </p>
 
@@ -22,6 +10,18 @@
   <a href="https://openjfx.io/"><img src="https://img.shields.io/badge/JavaFX-21.0.5-FF6500?style=for-the-badge&logo=openjdk&logoColor=white" alt="JavaFX 21" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="License MIT" /></a>
   <a href="#-contribuindo"><img src="https://img.shields.io/badge/PRs-Welcome-brightgreen?style=for-the-badge" alt="PRs Welcome" /></a>
+</p>
+
+<p align="center">
+  <video src="./assets/slide-md-demo.mp4" controls autoplay loop muted width="850" poster="./assets/demo-preview.png" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); max-width: 100%;">
+    <a href="./assets/slide-md-demo.mp4">
+      <img src="./assets/demo-preview.png" alt="slide-md Demonstração" width="850" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); max-width: 100%;" />
+    </a>
+  </video>
+</p>
+<p align="center">
+  <em>Demonstração em tempo real: navegação fluida, transições morph, caneta laser e editor integrado estilo VS Code.</em><br>
+  <a href="./assets/slide-md-demo.mp4">▶️ <strong>Assistir ao vídeo de demonstração em alta resolução (MP4)</strong></a>
 </p>
 
 ---
