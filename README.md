@@ -1,4 +1,4 @@
-# slide-md ⚡
+<h1 align="center">slide-md ⚡</h1>
 
 <p align="center">
   <strong>Apresentador de slides desktop moderno, minimalista e fluido a 60 FPS direto do seu Markdown.</strong>
