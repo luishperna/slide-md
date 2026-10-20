@@ -1,17 +1,35 @@
-/* Dark Antigravity theme for Markdown CodeArea */
+/* Dark Antigravity theme for Markdown CodeArea and Sidebar */
+.split-pane {
+    -fx-background-color: #101010;
+    -fx-box-border: transparent;
+    -fx-padding: 0;
+}
+
+.split-pane > .split-pane-divider {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0 2px 0 2px;
+}
+
+.split-pane > .split-pane-divider:hover {
+    -fx-background-color: #333338;
+}
+
 .code-area {
-    -fx-background-color: #1c1c1c;
-    background-color: #1c1c1c;
-    -fx-font-family: 'Consolas', 'Cascadia Code', 'Segoe UI', monospace;
+    -fx-background-color: #121316;
+    background-color: #121316;
+    -fx-font-family: 'Consolas', 'Cascadia Code', 'Fira Code', 'Segoe UI', monospace;
     -fx-font-size: 14px;
 }
 
 .code-area .styled-text-area {
-    -fx-background-color: #1c1c1c;
+    -fx-background-color: #121316;
 }
 
+/* Base text default color (#c1cccc) */
 .code-area .text {
-    -fx-fill: #e2e8f0;
+    -fx-fill: #c1cccc;
 }
 
 .code-area .lineno {
@@ -25,60 +43,227 @@
 }
 
 .code-area .caret {
-    -fx-stroke: #38bdf8;
+    -fx-stroke: #5cdc9d;
     -fx-stroke-width: 2px;
 }
 
 .code-area .selection {
-    -fx-fill: rgba(56, 189, 248, 0.3);
+    -fx-fill: rgba(92, 220, 157, 0.25);
 }
 
-/* Scrollbars */
-.virtualized-scroll-pane .scroll-bar:vertical {
-    -fx-background-color: #161616;
-    -fx-pref-width: 10px;
+/* VS Code Style Scrollbars (Finas, preto mais claro, discretas) */
+.virtualized-scroll-pane .scroll-bar,
+.code-area .scroll-bar,
+.side-editor-panel .scroll-bar {
+    -fx-background-color: #121316;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
 }
 
-.virtualized-scroll-pane .scroll-bar:vertical .thumb {
-    -fx-background-color: #334155;
+.virtualized-scroll-pane .scroll-bar:vertical,
+.code-area .scroll-bar:vertical,
+.side-editor-panel .scroll-bar:vertical {
+    -fx-pref-width: 8px;
+    -fx-min-width: 8px;
+    -fx-max-width: 8px;
+    -fx-background-color: #121316;
+}
+
+.virtualized-scroll-pane .scroll-bar:horizontal,
+.code-area .scroll-bar:horizontal,
+.side-editor-panel .scroll-bar:horizontal {
+    -fx-pref-height: 8px;
+    -fx-min-height: 8px;
+    -fx-max-height: 8px;
+    -fx-background-color: #121316;
+}
+
+.virtualized-scroll-pane .scroll-bar .track,
+.code-area .scroll-bar .track,
+.side-editor-panel .scroll-bar .track {
+    -fx-background-color: #121316;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+}
+
+.virtualized-scroll-pane .scroll-bar .thumb,
+.code-area .scroll-bar .thumb,
+.side-editor-panel .scroll-bar .thumb {
+    -fx-background-color: #2d2d32;
     -fx-background-radius: 4px;
+    -fx-background-insets: 1px;
 }
 
-.virtualized-scroll-pane .scroll-bar:vertical .thumb:hover {
-    -fx-background-color: #475569;
+.virtualized-scroll-pane .scroll-bar .thumb:hover,
+.code-area .scroll-bar .thumb:hover,
+.side-editor-panel .scroll-bar .thumb:hover {
+    -fx-background-color: #484852;
+}
+
+.virtualized-scroll-pane .scroll-bar .thumb:pressed,
+.code-area .scroll-bar .thumb:pressed,
+.side-editor-panel .scroll-bar .thumb:pressed {
+    -fx-background-color: #5c5c68;
+}
+
+.virtualized-scroll-pane .scroll-bar .increment-button,
+.virtualized-scroll-pane .scroll-bar .decrement-button,
+.code-area .scroll-bar .increment-button,
+.code-area .scroll-bar .decrement-button,
+.side-editor-panel .scroll-bar .increment-button,
+.side-editor-panel .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+    -fx-min-width: 0;
+    -fx-min-height: 0;
+    -fx-max-width: 0;
+    -fx-max-height: 0;
+}
+
+.virtualized-scroll-pane .scroll-bar .increment-arrow,
+.virtualized-scroll-pane .scroll-bar .decrement-arrow,
+.code-area .scroll-bar .increment-arrow,
+.code-area .scroll-bar .decrement-arrow,
+.side-editor-panel .scroll-bar .increment-arrow,
+.side-editor-panel .scroll-bar .decrement-arrow {
+    -fx-shape: " ";
+    -fx-padding: 0;
+}
+
+.virtualized-scroll-pane .corner,
+.code-area .corner,
+.side-editor-panel .corner {
+    -fx-background-color: #121316;
+}
+
+/* Autocomplete Popup ScrollBar Minimalista */
+.autocomplete-scroll-pane,
+.autocomplete-scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.autocomplete-scroll-pane .scroll-bar:vertical {
+    -fx-pref-width: 6px;
+    -fx-min-width: 6px;
+    -fx-max-width: 6px;
+    -fx-background-color: transparent;
+}
+
+.autocomplete-scroll-pane .scroll-bar .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.autocomplete-scroll-pane .scroll-bar .thumb {
+    -fx-background-color: #2d2d32;
+    -fx-background-radius: 3px;
+}
+
+.autocomplete-scroll-pane .scroll-bar .thumb:hover {
+    -fx-background-color: #484852;
+}
+
+.autocomplete-scroll-pane .scroll-bar .increment-button,
+.autocomplete-scroll-pane .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+    -fx-min-width: 0;
+    -fx-min-height: 0;
+    -fx-max-width: 0;
+    -fx-max-height: 0;
+}
+
+.autocomplete-scroll-pane .scroll-bar .increment-arrow,
+.autocomplete-scroll-pane .scroll-bar .decrement-arrow {
+    -fx-shape: " ";
+    -fx-padding: 0;
 }
 
 /* Syntax Highlighting */
+
+/* Separadores de slides (---) */
+.code-area .text.md-divider,
+.code-area .md-divider,
 .md-divider {
-    -fx-fill: #38bdf8;
+    -fx-fill: #c1cccc;
     -fx-font-weight: bold;
 }
 
+/* Títulos (# Slide, ## Subtítulo) */
+.code-area .text.md-header,
+.code-area .md-header,
 .md-header {
-    -fx-fill: #60a5fa;
+    -fx-fill: #79b8ff;
     -fx-font-weight: bold;
 }
 
+/* Chaves de diretiva (background:, align:, transition:, video:, cut:, loop:, autoplay:, music:, etc.) */
+.code-area .text.md-directive-key,
+.code-area .md-directive-key,
+.md-directive-key,
+.code-area .text.md-directive,
+.code-area .md-directive,
 .md-directive {
-    -fx-fill: #fbbf24;
+    -fx-fill: #5cdc9d;
     -fx-font-weight: bold;
 }
 
+/* Valores de diretiva (#0f172a, center, morph, 00:05 - 00:25, true, ./assets/audio.mp3, etc.) */
+.code-area .text.md-directive-val,
+.code-area .md-directive-val,
+.md-directive-val {
+    -fx-fill: #5cdc9d;
+}
+
+/* Citações (> citação) */
+.code-area .text.md-quote,
+.code-area .md-quote,
 .md-quote {
-    -fx-fill: #34d399;
+    -fx-fill: #c1cccc;
     -fx-font-style: italic;
 }
 
+/* Itens de lista (-, *, 1.) - mesmo tom de azul dos títulos (#79b8ff) */
+.code-area .text.md-list,
+.code-area .md-list,
 .md-list {
-    -fx-fill: #c084fc;
+    -fx-fill: #79b8ff;
     -fx-font-weight: bold;
 }
 
+/* Código inline e blocos de código */
+.code-area .text.md-code,
+.code-area .md-code,
 .md-code {
-    -fx-fill: #f472b6;
+    -fx-fill: #c1cccc;
+    -fx-font-family: 'Consolas', 'Cascadia Code', monospace;
 }
 
+/* Texto em negrito (**texto**) */
+.code-area .text.md-bold,
+.code-area .md-bold,
 .md-bold {
-    -fx-fill: #ffffff;
+    -fx-fill: #c1cccc;
     -fx-font-weight: bold;
+}
+
+/* Texto em itálico (*texto*) */
+.code-area .text.md-italic,
+.code-area .md-italic,
+.md-italic {
+    -fx-fill: #c1cccc;
+    -fx-font-style: italic;
+}
+
+/* Comentários HTML (<!-- ... -->) */
+.code-area .text.md-comment,
+.code-area .md-comment,
+.md-comment {
+    -fx-fill: #c1cccc;
+    -fx-font-style: italic;
+    -fx-opacity: 0.85;
 }

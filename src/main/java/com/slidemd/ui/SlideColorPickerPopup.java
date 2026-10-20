@@ -1,229 +1,205 @@
 package com.slidemd.ui;
 
+import javafx.beans.value.ChangeListener;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.ColorPicker;
-import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import javafx.stage.Popup;
-import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Card flutuante interativo para seleção de cor ou gradiente de fundo (bg) do slide.
+ * Card flutuante para seleção de cor do slide (background).
+ * Inspirado na paleta padrão de temas visuais do Windows/Office:
+ * - Linha 1: 12 cores de destaque vibrantes.
+ * - Linha 2: 12 tons de escala de cinza (do branco ao preto).
+ * - Grade: Matriz de tonalidades organizadas em 12 colunas harmônicas (do escuro ao claro).
+ * Fundo preto puro e sem opções de personalização externa.
  */
 public class SlideColorPickerPopup {
 
     private final Popup popup;
     private final Consumer<String> onColorSelected;
 
-    private static final record ColorPreset(String name, String hex) {}
-
-    private static final List<ColorPreset> PRESETS = List.of(
-            new ColorPreset("Obsidian", "#090d16"),
-            new ColorPreset("Slate Dark", "#0f172a"),
-            new ColorPreset("Slate Midnight", "#1e293b"),
-            new ColorPreset("Zinc Dark", "#18181b"),
-            new ColorPreset("Gray Deep", "#111827"),
-            new ColorPreset("Pure Black", "#000000"),
-            new ColorPreset("Deep Blue", "#1e3a8a"),
-            new ColorPreset("Emerald Dark", "#064e3b"),
-            new ColorPreset("Purple Indigo", "#581c87"),
-            new ColorPreset("Bronze Auburn", "#7c2d12"),
-            new ColorPreset("Rose Deep", "#831843"),
-            new ColorPreset("Studio Dark", "#1e1e1e")
+    // 1. Linha de Tons de Cinza (do tom mais alto/escuro ao mais claro)
+    private static final List<String> GRAYSCALE = List.of(
+            "#000000", "#141414", "#262626", "#383838",
+            "#4d4d4d", "#666666", "#808080", "#999999",
+            "#b3b3b3", "#cccccc", "#e6e6e6", "#ffffff"
     );
 
-    private static final record GradientPreset(String name, String css) {}
+    // 2. Matriz de Cores Temáticas (12 Colunas x 8 Linhas de Tonalidades do tom mais alto ao mais claro)
+    private static final String[][] COLOR_MATRIX = {
+            // Linha 1 (Tons mais altos / escuros)
+            {"#05252b", "#051535", "#0a1033", "#1a0833", "#2b052b", "#330505", "#331505", "#332505", "#283305", "#05330a", "#05331e", "#0d1117"},
+            // Linha 2
+            {"#093d47", "#092359", "#121c54", "#2d0f54", "#470947", "#540909", "#542309", "#543d09", "#425409", "#095411", "#095432", "#161b22"},
+            // Linha 3
+            {"#0d5a69", "#0f388a", "#1d2d82", "#471882", "#6e0e6e", "#820f0f", "#82370f", "#825f0f", "#66820f", "#0f821b", "#0f824e", "#21262d"},
+            // Linha 4
+            {"#127b8f", "#1753c4", "#2b41b8", "#6424b5", "#9c149c", "#b51616", "#b54e16", "#b58516", "#8fb516", "#16b527", "#16b56d", "#30363d"},
+            // Linha 5 (Médios / Puros)
+            {"#179db8", "#2d6ee6", "#4d65db", "#8644db", "#c728c7", "#db3535", "#db6f35", "#dba935", "#b5db35", "#35db49", "#35db8f", "#484f58"},
+            // Linha 6
+            {"#4cbcd1", "#5c92f0", "#7a8de5", "#a46fea", "#d957d9", "#e66565", "#e69165", "#e6c165", "#c9e665", "#65e675", "#65e6ab", "#6e7681"},
+            // Linha 7
+            {"#8ad7e5", "#94b9f7", "#abc0f2", "#c9a9f4", "#e88ee8", "#f09999", "#f0b799", "#f0d899", "#dfef99", "#99f0a5", "#99f0cb", "#8b949e"},
+            // Linha 8 (Pastéis / Claros)
+            {"#cceef4", "#cfe0fc", "#d6e1fa", "#e7d8fb", "#f6ccf6", "#f9cccc", "#f9ded0", "#f9edcf", "#f2f9cf", "#d0f9d6", "#d0f9e9", "#c9d1d9"}
+    };
 
-    private static final List<GradientPreset> GRADIENTS = List.of(
-            new GradientPreset("Obsidian & Slate", "linear-gradient(to bottom right, #090d16, #1e293b)"),
-            new GradientPreset("Midnight Blue", "linear-gradient(to bottom right, #0f172a, #1e3a8a)"),
-            new GradientPreset("Emerald Deep", "linear-gradient(to bottom right, #111827, #064e3b)"),
-            new GradientPreset("Purple Night", "linear-gradient(to bottom right, #18181b, #581c87)")
-    );
+    private static final double CELL_SIZE = 18.0;
+
+    private Scene registeredScene = null;
+    private Window registeredWindow = null;
+    private final ChangeListener<Boolean> windowFocusListener;
+    private final EventHandler<MouseEvent> outsideClickHandler;
 
     public SlideColorPickerPopup(Consumer<String> onColorSelected) {
         this.onColorSelected = onColorSelected;
         this.popup = new Popup();
-        this.popup.setAutoHide(true);
+        this.popup.setAutoHide(false);
         this.popup.setHideOnEscape(true);
+        this.popup.setOnHidden(e -> cleanupListeners());
 
-        VBox root = new VBox(10);
-        root.setPadding(new Insets(12, 14, 14, 14));
-        root.setPrefWidth(300);
-        root.setStyle("-fx-background-color: #181818;" +
-                      "-fx-background-radius: 8px;" +
-                      "-fx-border-color: #2a2a2a;" +
-                      "-fx-border-radius: 8px;" +
+        this.windowFocusListener = (obs, wasFocused, isFocused) -> {
+            if (!isFocused) {
+                hide();
+            }
+        };
+
+        this.outsideClickHandler = event -> {
+            if (!popup.isShowing()) return;
+
+            double x = event.getScreenX();
+            double y = event.getScreenY();
+
+            double px = popup.getX();
+            double py = popup.getY();
+            double pw = popup.getWidth();
+            double ph = popup.getHeight();
+
+            // Se o clique foi fora do card de cores
+            if (x < px || x > px + pw || y < py || y > py + ph) {
+                hide();
+                // CRÍTICO: NÃO consome o evento!
+                // Deixa o evento propagar normalmente para mover o cursor no editor ou clicar em botões no primeiro clique
+            }
+        };
+
+        VBox root = new VBox(5);
+        root.setPadding(new Insets(10));
+        root.setStyle("-fx-background-color: #121214;" +
+                      "-fx-background-radius: 6px;" +
+                      "-fx-border-color: #2b2b30;" +
+                      "-fx-border-radius: 6px;" +
                       "-fx-border-width: 1px;" +
-                      "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.7), 18, 0.25, 0, 4);");
+                      "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.8), 20, 0.3, 0, 4);");
 
-        // Header: Título e Botão Fechar
-        HBox header = new HBox(8);
-        header.setAlignment(Pos.CENTER_LEFT);
+        // 1. Linha de Escala de Cinza (12 quadradinhos perfeitos de 18x18)
+        HBox grayRow = new HBox(2.5);
+        grayRow.setAlignment(Pos.CENTER);
+        for (String hex : GRAYSCALE) {
+            grayRow.getChildren().add(createColorCell(hex, CELL_SIZE));
+        }
 
-        Label title = new Label("🎨 Fundo do Slide (bg)");
-        title.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
-        title.setTextFill(Color.web("#ffffff"));
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        Button closeBtn = new Button("✕");
-        closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #888888; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 0 4 0 4;");
-        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle("-fx-background-color: #2a2a2a; -fx-text-fill: #ffffff; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 0 4 0 4; -fx-background-radius: 3px;"));
-        closeBtn.setOnMouseExited(e -> closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #888888; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 0 4 0 4;"));
-        closeBtn.setOnAction(e -> popup.hide());
-
-        header.getChildren().addAll(title, spacer, closeBtn);
-
-        // Seção: Cores Sólidas Populares
-        Label presetsTitle = new Label("Cores Sólidas Populares");
-        presetsTitle.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 10.5));
-        presetsTitle.setTextFill(Color.web("#a3a3a3"));
-
+        // 2. Grade Principal de Cores (12 Colunas x 8 Linhas de 18x18)
         GridPane grid = new GridPane();
-        grid.setHgap(6);
-        grid.setVgap(6);
-        grid.setAlignment(Pos.CENTER_LEFT);
+        grid.setHgap(2.5);
+        grid.setVgap(2.5);
+        grid.setAlignment(Pos.CENTER);
 
-        int col = 0;
-        int row = 0;
-        for (ColorPreset cp : PRESETS) {
-            Button btn = createColorButton(cp.hex, cp.name + " (" + cp.hex + ")");
-            grid.add(btn, col, row);
-            col++;
-            if (col >= 6) {
-                col = 0;
-                row++;
+        for (int r = 0; r < COLOR_MATRIX.length; r++) {
+            for (int c = 0; c < COLOR_MATRIX[r].length; c++) {
+                String hex = COLOR_MATRIX[r][c];
+                grid.add(createColorCell(hex, CELL_SIZE), c, r);
             }
         }
 
-        // Seção: Gradientes Modernos
-        Label gradientTitle = new Label("Gradientes Elegantes");
-        gradientTitle.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 10.5));
-        gradientTitle.setTextFill(Color.web("#a3a3a3"));
-
-        VBox gradList = new VBox(4);
-        for (GradientPreset gp : GRADIENTS) {
-            Button gradBtn = createGradientButton(gp.name, gp.css);
-            gradList.getChildren().add(gradBtn);
-        }
-
-        // Seção: Seletor de Cor Customizado (ColorPicker nativo)
-        HBox customRow = new HBox(8);
-        customRow.setAlignment(Pos.CENTER_LEFT);
-
-        Label customLabel = new Label("Personalizada:");
-        customLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 10.5));
-        customLabel.setTextFill(Color.web("#a3a3a3"));
-
-        ColorPicker colorPicker = new ColorPicker(Color.web("#1e293b"));
-        colorPicker.setStyle("-fx-background-color: #262626; -fx-color-label-visible: false; -fx-cursor: hand; -fx-background-radius: 4px;");
-        colorPicker.setOnAction(e -> {
-            Color c = colorPicker.getValue();
-            if (c != null) {
-                String hex = String.format("#%02x%02x%02x",
-                        (int) Math.round(c.getRed() * 255),
-                        (int) Math.round(c.getGreen() * 255),
-                        (int) Math.round(c.getBlue() * 255));
-                selectColor(hex);
-            }
-        });
-
-        customRow.getChildren().addAll(customLabel, colorPicker);
-
-        root.getChildren().addAll(header, presetsTitle, grid, gradientTitle, gradList, customRow);
+        root.getChildren().addAll(grayRow, grid);
         popup.getContent().add(root);
     }
 
-    private Button createColorButton(String hex, String tooltip) {
+    private Button createColorCell(String hex, double size) {
         Button btn = new Button();
-        btn.setPrefSize(34, 28);
-        btn.setMinSize(34, 28);
-        btn.setMaxSize(34, 28);
+        btn.setPrefSize(size, size);
+        btn.setMinSize(size, size);
+        btn.setMaxSize(size, size);
 
         String baseStyle = "-fx-background-color: " + hex + ";" +
-                           "-fx-background-radius: 4px;" +
-                           "-fx-border-color: #383838;" +
-                           "-fx-border-radius: 4px;" +
-                           "-fx-border-width: 1px;" +
-                           "-fx-cursor: hand;";
+                           "-fx-background-radius: 2.5px;" +
+                           "-fx-border-color: rgba(255, 255, 255, 0.12);" +
+                           "-fx-border-radius: 2.5px;" +
+                           "-fx-border-width: 0.5px;" +
+                           "-fx-cursor: hand;" +
+                           "-fx-padding: 0;";
 
         String hoverStyle = "-fx-background-color: " + hex + ";" +
-                            "-fx-background-radius: 4px;" +
+                            "-fx-background-radius: 2.5px;" +
                             "-fx-border-color: #ffffff;" +
-                            "-fx-border-radius: 4px;" +
+                            "-fx-border-radius: 2.5px;" +
                             "-fx-border-width: 1.5px;" +
-                            "-fx-cursor: hand;";
+                            "-fx-cursor: hand;" +
+                            "-fx-padding: 0;";
 
         btn.setStyle(baseStyle);
         btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
         btn.setOnMouseExited(e -> btn.setStyle(baseStyle));
         btn.setOnAction(e -> selectColor(hex));
-        Tooltip.install(btn, new Tooltip(tooltip));
+
+        Tooltip.install(btn, new Tooltip(hex));
         return btn;
     }
 
-    private Button createGradientButton(String name, String css) {
-        Button btn = new Button();
-        btn.setMaxWidth(Double.MAX_VALUE);
-        btn.setAlignment(Pos.CENTER_LEFT);
-        btn.setPadding(new Insets(3, 8, 3, 8));
-
-        Rectangle preview = new Rectangle(24, 14);
-        preview.setArcWidth(4);
-        preview.setArcHeight(4);
-        preview.setStyle("-fx-fill: " + css + "; -fx-stroke: #404040; -fx-stroke-width: 0.5px;");
-
-        Label label = new Label(name);
-        label.setFont(Font.font("Segoe UI", 11));
-        label.setTextFill(Color.web("#e5e5e5"));
-
-        HBox content = new HBox(8, preview, label);
-        content.setAlignment(Pos.CENTER_LEFT);
-        btn.setGraphic(content);
-
-        String base = "-fx-background-color: #222222; -fx-background-radius: 4px; -fx-cursor: hand; -fx-border-color: transparent;";
-        String hover = "-fx-background-color: #2c2c2c; -fx-background-radius: 4px; -fx-cursor: hand; -fx-border-color: #38bdf8; -fx-border-radius: 4px; -fx-border-width: 1px;";
-
-        btn.setStyle(base);
-        btn.setOnMouseEntered(e -> btn.setStyle(hover));
-        btn.setOnMouseExited(e -> btn.setStyle(base));
-        btn.setOnAction(e -> selectColor(css));
-        return btn;
-    }
-
-    private void selectColor(String value) {
-        popup.hide();
+    private void selectColor(String hex) {
+        hide();
         if (onColorSelected != null) {
-            onColorSelected.accept(value);
+            onColorSelected.accept(hex);
         }
     }
 
-    public void show(Stage ownerStage, double screenX, double screenY) {
+    public void show(Window ownerWindow, double screenX, double screenY) {
         if (popup.isShowing()) {
             popup.hide();
         }
-        popup.show(ownerStage, screenX, screenY);
+        cleanupListeners();
+
+        popup.show(ownerWindow, screenX, screenY);
+
+        if (ownerWindow != null) {
+            registeredWindow = ownerWindow;
+            ownerWindow.focusedProperty().addListener(windowFocusListener);
+            if (ownerWindow.getScene() != null) {
+                registeredScene = ownerWindow.getScene();
+                registeredScene.addEventFilter(MouseEvent.MOUSE_PRESSED, outsideClickHandler);
+            }
+        }
     }
 
     public void hide() {
         if (popup.isShowing()) {
             popup.hide();
+        }
+        cleanupListeners();
+    }
+
+    private void cleanupListeners() {
+        if (registeredScene != null) {
+            registeredScene.removeEventFilter(MouseEvent.MOUSE_PRESSED, outsideClickHandler);
+            registeredScene = null;
+        }
+        if (registeredWindow != null) {
+            registeredWindow.focusedProperty().removeListener(windowFocusListener);
+            registeredWindow = null;
         }
     }
 
@@ -231,3 +207,4 @@ public class SlideColorPickerPopup {
         return popup.isShowing();
     }
 }
+

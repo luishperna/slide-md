@@ -1,9 +1,13 @@
 package com.slidemd.ui;
 
+import javafx.beans.value.ChangeListener;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -13,6 +17,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,74 +48,74 @@ public class DirectiveAutocompletePopup {
     // Sugestões de Diretivas e Comandos Slash (/)
     public static final List<SuggestionItem> ALL_COMMANDS_AND_DIRECTIVES = List.of(
             new SuggestionItem(
-                    "bg: ",
-                    "bg:",
+                    "background: ",
+                    "background:",
                     "DIRETIVA",
-                    "Define a cor de fundo (#hex, rgb, nome) ou gradiente elegante do slide",
-                    "bg: #1e293b",
-                    Color.web("#38bdf8")
+                    "Gradiente [#1e293b, #0f172a, 45%], cor ou imagem",
+                    "background: [#1e293b, #0f172a, 45%]",
+                    Color.web("#60a5fa")
             ),
             new SuggestionItem(
                     "\n\n---\n\n# Novo Slide\n",
                     "/slide",
                     "COMANDO",
-                    "Insere um novo slide delimitado por '---' com título inicial",
+                    "Novo slide delimitado por '---'",
                     "---",
                     Color.web("#c084fc")
             ),
             new SuggestionItem(
-                    "align: ",
-                    "align:",
+                    "alignment: ",
+                    "alignment:",
                     "DIRETIVA",
-                    "Define o alinhamento de texto e conteúdo na tela (center, left ou right)",
-                    "align: center",
-                    Color.web("#38bdf8")
+                    "Alinhamento do conteúdo: center, left, right, top ou down",
+                    "alignment: center",
+                    Color.web("#60a5fa")
             ),
             new SuggestionItem(
                     "transition: ",
                     "transition:",
                     "DIRETIVA",
-                    "Efeito de transição de entrada: morph (Transformar), slide, fade ou zoom",
+                    "Efeito de transição: morph, slide, fade ou zoom",
                     "transition: morph",
-                    Color.web("#38bdf8")
+                    Color.web("#60a5fa")
             ),
             new SuggestionItem(
                     "video: ",
                     "video:",
                     "DIRETIVA",
-                    "Caminho do arquivo de vídeo MP4 com reprodução nativa sem dependências",
-                    "video: ./assets/demo.mp4",
-                    Color.web("#38bdf8")
+                    "Vídeo MP4 com corte inline [...] e junção por vírgula",
+                    "video: ./demo.mp4 [00:10-00:45]",
+                    Color.web("#60a5fa")
             ),
             new SuggestionItem(
-                    "cut: ",
-                    "cut:",
+                    "sound: ",
+                    "sound:",
                     "DIRETIVA",
-                    "Corte virtual de vídeo por tempo (MM:SS - MM:SS) com reprodução instantânea",
-                    "cut: 00:05 - 00:25",
-                    Color.web("#38bdf8")
+                    "Áudio de fundo contínuo (MP3, WAV, AAC)",
+                    "sound: ./assets/theme.mp3",
+                    Color.web("#60a5fa")
             ),
             new SuggestionItem(
-                    "loop: true",
-                    "loop:",
+                    "image: ",
+                    "image:",
                     "DIRETIVA",
-                    "Repete a reprodução do vídeo continuamente em loop (true ou false)",
-                    "loop: true",
-                    Color.web("#38bdf8")
+                    "Imagem do slide ou inline (JPG, PNG, WebP)",
+                    "image: ./assets/foto.jpg",
+                    Color.web("#60a5fa")
             ),
             new SuggestionItem(
-                    "autoplay: true",
-                    "autoplay:",
+                    "color: ",
+                    "color:",
                     "DIRETIVA",
-                    "Inicia a reprodução do vídeo automaticamente ao entrar no slide",
-                    "autoplay: true",
-                    Color.web("#38bdf8")
+                    "Cor temática dos títulos e marcadores (#ef4444, #38bdf8, etc)",
+                    "color: #ef4444",
+                    Color.web("#60a5fa")
             ),
             new SuggestionItem(
                     "```java\n// Código aqui\n```\n",
                     "/code",
                     "BLOCO",
-                    "Insere um bloco de código com formatação e destaque sintático",
+                    "Bloco de código com destaque sintático",
                     "```java ... ```",
                     Color.web("#fbbf24")
             ),
@@ -118,82 +123,123 @@ public class DirectiveAutocompletePopup {
                     "> \"Citação aqui\"\n",
                     "/quote",
                     "BLOCO",
-                    "Insere um bloco de citação estilizado (blockquote com barra lateral)",
+                    "Bloco de citação estilizado em destaque",
                     "> citação",
                     Color.web("#34d399")
             )
     );
 
-    // Sugestões de Valores para align:
+    // Sugestões de Valores para alignment:
     public static final List<SuggestionItem> ALIGN_VALUES = List.of(
-            new SuggestionItem("center", "center", "VALOR", "Conteúdo centralizado horizontal e verticalmente no slide", "align: center", Color.web("#34d399")),
-            new SuggestionItem("left", "left", "VALOR", "Conteúdo alinhado à esquerda com margem elegante", "align: left", Color.web("#34d399")),
-            new SuggestionItem("right", "right", "VALOR", "Conteúdo alinhado à margem direita da tela", "align: right", Color.web("#34d399"))
+            new SuggestionItem("center", "center", "VALOR", "Conteúdo centralizado no slide", "alignment: center", Color.web("#34d399")),
+            new SuggestionItem("left", "left", "VALOR", "Conteúdo alinhado à esquerda", "alignment: left", Color.web("#34d399")),
+            new SuggestionItem("right", "right", "VALOR", "Conteúdo alinhado à direita", "alignment: right", Color.web("#34d399")),
+            new SuggestionItem("top", "top", "VALOR", "Conteúdo alinhado no topo", "alignment: top", Color.web("#34d399")),
+            new SuggestionItem("down", "down", "VALOR", "Conteúdo alinhado na base", "alignment: down", Color.web("#34d399"))
     );
 
     // Sugestões de Valores para transition:
     public static final List<SuggestionItem> TRANSITION_VALUES = List.of(
-            new SuggestionItem("morph", "morph", "VALOR", "Efeito Transformar do PowerPoint com fluidez a 60 FPS", "transition: morph", Color.web("#c084fc")),
-            new SuggestionItem("slide", "slide", "VALOR", "Deslizamento cinematográfico lateral acelerado por hardware", "transition: slide", Color.web("#34d399")),
-            new SuggestionItem("fade", "fade", "VALOR", "Transição suave de opacidade entre slides (crossfade)", "transition: fade", Color.web("#34d399")),
-            new SuggestionItem("zoom", "zoom", "VALOR", "Aproximação sutil de câmera com sensação de profundidade", "transition: zoom", Color.web("#34d399"))
+            new SuggestionItem("morph", "morph", "VALOR", "Efeito Transformar fluido a 60 FPS", "transition: morph", Color.web("#34d399")),
+            new SuggestionItem("slide", "slide", "VALOR", "Deslizamento cinematográfico suave", "transition: slide", Color.web("#34d399")),
+            new SuggestionItem("fade", "fade", "VALOR", "Dissolvência suave entre slides", "transition: fade", Color.web("#34d399")),
+            new SuggestionItem("zoom", "zoom", "VALOR", "Aproximação sutil de câmera", "transition: zoom", Color.web("#34d399"))
     );
 
-    // Sugestões de Valores Booleanos (loop, autoplay)
-    public static final List<SuggestionItem> BOOLEAN_VALUES = List.of(
-            new SuggestionItem("true", "true", "VALOR", "Ativa o recurso no slide atual", "true", Color.web("#34d399")),
-            new SuggestionItem("false", "false", "VALOR", "Desativa o recurso no slide atual", "false", Color.web("#f87171"))
-    );
+    private Scene registeredScene = null;
+    private Window registeredWindow = null;
+    private final ChangeListener<Boolean> windowFocusListener;
+    private final EventHandler<MouseEvent> outsideClickHandler;
 
     public DirectiveAutocompletePopup(Consumer<SuggestionItem> onItemSelected) {
         this.onItemSelected = onItemSelected;
         this.popup = new Popup();
-        this.popup.setAutoHide(true);
+        this.popup.setAutoHide(false);
         this.popup.setHideOnEscape(true);
+        this.popup.setOnHidden(e -> cleanupListeners());
+
+        this.windowFocusListener = (obs, wasFocused, isFocused) -> {
+            if (!isFocused) {
+                hide();
+            }
+        };
+
+        this.outsideClickHandler = event -> {
+            if (!popup.isShowing()) return;
+
+            double x = event.getScreenX();
+            double y = event.getScreenY();
+
+            double px = popup.getX();
+            double py = popup.getY();
+            double pw = popup.getWidth();
+            double ph = popup.getHeight();
+
+            // Se o clique foi fora do popup
+            if (x < px || x > px + pw || y < py || y > py + ph) {
+                hide();
+                // CRÍTICO: NÃO consome o evento! Deixa fluir para mover o cursor no editor
+            }
+        };
 
         VBox root = new VBox();
-        root.setPrefWidth(470);
-        root.setMaxWidth(470);
-        root.setMaxHeight(320);
-        root.setStyle("-fx-background-color: #1e1e1e;" +
-                      "-fx-background-radius: 6px;" +
-                      "-fx-border-color: #3c3c3c;" +
-                      "-fx-border-radius: 6px;" +
+        root.setPrefWidth(380);
+        root.setMaxWidth(380);
+        root.setMaxHeight(260);
+        root.setStyle("-fx-background-color: #161618;" +
+                      "-fx-background-radius: 8px;" +
+                      "-fx-border-color: #27272a;" +
+                      "-fx-border-radius: 8px;" +
                       "-fx-border-width: 1px;" +
-                      "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.75), 18, 0.3, 0, 4);");
+                      "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.65), 18, 0.25, 0, 6);");
 
-        // Cabeçalho estilo VS Code
+        // Carrega CSS de scrollbar do editor no popup
+        root.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                try {
+                    var cssUrl = getClass().getResource("/css/markdown-editor.css");
+                    if (cssUrl != null) {
+                        newScene.getStylesheets().add(cssUrl.toExternalForm());
+                    }
+                } catch (Exception ignored) {}
+            }
+        });
+
+        // Cabeçalho Minimalista
         HBox header = new HBox(8);
         header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(6, 12, 6, 12));
-        header.setStyle("-fx-background-color: #252526;" +
-                        "-fx-border-color: transparent transparent #2d2d2d transparent;" +
+        header.setPrefHeight(26);
+        header.setMinHeight(26);
+        header.setPadding(new Insets(0, 10, 0, 10));
+        header.setStyle("-fx-background-color: #1c1c20;" +
+                        "-fx-border-color: transparent transparent #26262a transparent;" +
                         "-fx-border-width: 1px;" +
-                        "-fx-background-radius: 6px 6px 0 0;");
+                        "-fx-background-radius: 8px 8px 0 0;");
 
-        Label headerTitle = new Label("Sugestões");
-        headerTitle.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
-        headerTitle.setTextFill(Color.web("#cccccc"));
+        Label headerTitle = new Label("SUGESTÕES");
+        headerTitle.setFont(Font.font("Segoe UI", FontWeight.BOLD, 10));
+        headerTitle.setTextFill(Color.web("#71717a"));
 
         Region headerSpacer = new Region();
         HBox.setHgrow(headerSpacer, Priority.ALWAYS);
 
-        Label headerHints = new Label("↑↓ Navegar  •  Enter / Tab Inserir  •  Esc Fechar");
-        headerHints.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 10));
-        headerHints.setTextFill(Color.web("#858585"));
+        Label headerHints = new Label("↵ ou Tab inserir  •  Esc fechar");
+        headerHints.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 9.5));
+        headerHints.setTextFill(Color.web("#52525b"));
 
         header.getChildren().addAll(headerTitle, headerSpacer, headerHints);
 
         // Container de Itens com ScrollPane
-        itemListContainer = new VBox(1);
-        itemListContainer.setPadding(new Insets(4, 4, 4, 4));
+        itemListContainer = new VBox(2);
+        itemListContainer.setPadding(new Insets(3, 3, 3, 3));
 
         ScrollPane scrollPane = new ScrollPane(itemListContainer);
+        scrollPane.getStyleClass().add("autocomplete-scroll-pane");
         scrollPane.setFitToWidth(true);
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.setMaxHeight(270);
-        scrollPane.setStyle("-fx-background: #1e1e1e; -fx-background-color: transparent; -fx-padding: 0;");
+        scrollPane.setMaxHeight(230);
+        scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent; -fx-padding: 0;");
 
         root.getChildren().addAll(header, scrollPane);
         popup.getContent().add(root);
@@ -215,41 +261,40 @@ public class DirectiveAutocompletePopup {
             final int index = i;
             SuggestionItem item = currentItems.get(i);
 
-            VBox rowContainer = new VBox(3);
-            rowContainer.setPadding(new Insets(6, 10, 6, 10));
-            rowContainer.setStyle("-fx-background-radius: 4px; -fx-cursor: hand;");
+            VBox rowContainer = new VBox(2);
+            rowContainer.setPadding(new Insets(5, 8, 5, 8));
+            rowContainer.setStyle("-fx-background-radius: 5px; -fx-cursor: hand;");
 
             // Linha Superior: Badge + Nome + Exemplo
-            HBox topRow = new HBox(8);
+            HBox topRow = new HBox(6);
             topRow.setAlignment(Pos.CENTER_LEFT);
 
             Label badge = new Label(item.typeBadge());
-            badge.setFont(Font.font("Segoe UI", FontWeight.BOLD, 9));
+            badge.setFont(Font.font("Segoe UI", FontWeight.BOLD, 8.5));
             String badgeHex = toHex(item.badgeColor());
             badge.setStyle("-fx-text-fill: " + badgeHex + ";" +
-                           "-fx-background-color: rgba(255, 255, 255, 0.08);" +
+                           "-fx-background-color: rgba(255, 255, 255, 0.05);" +
                            "-fx-background-radius: 3px;" +
-                           "-fx-padding: 1 5 1 5;");
+                           "-fx-padding: 1 4 1 4;");
 
             Label name = new Label(item.displayText());
             name.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
-            name.setTextFill(Color.web("#ffffff"));
+            name.setTextFill(Color.web("#f4f4f5"));
 
             Region topSpacer = new Region();
             HBox.setHgrow(topSpacer, Priority.ALWAYS);
 
             Label example = new Label(item.exampleText());
-            example.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 11));
-            example.setTextFill(Color.web("#858585"));
+            example.setFont(Font.font("Consolas", FontWeight.NORMAL, 10.5));
+            example.setTextFill(Color.web("#71717a"));
 
             topRow.getChildren().addAll(badge, name, topSpacer, example);
 
-            // Linha Inferior: Descrição Completa Sem Abreviações (WrapText)
+            // Linha Inferior: Descrição Objetiva
             Label desc = new Label(item.description());
-            desc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 11.5));
-            desc.setTextFill(Color.web("#b3b3b3"));
-            desc.setWrapText(true);
-            desc.setMaxWidth(440);
+            desc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 10.5));
+            desc.setTextFill(Color.web("#a1a1aa"));
+            desc.setMaxWidth(360);
 
             rowContainer.getChildren().addAll(topRow, desc);
 
@@ -294,16 +339,16 @@ public class DirectiveAutocompletePopup {
         for (int i = 0; i < itemNodes.size(); i++) {
             VBox node = itemNodes.get(i);
             if (i == selectedIndex) {
-                node.setStyle("-fx-background-color: #04395e;" +
-                              "-fx-border-color: transparent transparent transparent #007acc;" +
+                node.setStyle("-fx-background-color: #27272a;" +
+                              "-fx-border-color: transparent transparent transparent #3b82f6;" +
                               "-fx-border-width: 0 0 0 3px;" +
-                              "-fx-background-radius: 0 4px 4px 0;" +
+                              "-fx-background-radius: 0 5px 5px 0;" +
                               "-fx-cursor: hand;");
             } else {
                 node.setStyle("-fx-background-color: transparent;" +
                               "-fx-border-color: transparent;" +
                               "-fx-border-width: 0 0 0 3px;" +
-                              "-fx-background-radius: 4px;" +
+                              "-fx-background-radius: 5px;" +
                               "-fx-cursor: hand;");
             }
         }
@@ -316,18 +361,41 @@ public class DirectiveAutocompletePopup {
                 (int) Math.round(c.getBlue() * 255));
     }
 
-    public void show(Stage ownerStage, double screenX, double screenY) {
+    public void show(javafx.stage.Window ownerWindow, double screenX, double screenY) {
         if (popup.isShowing()) {
             popup.hide();
         }
+        cleanupListeners();
+
         if (!itemListContainer.getChildren().isEmpty()) {
-            popup.show(ownerStage, screenX, screenY);
+            popup.show(ownerWindow, screenX, screenY);
+
+            if (ownerWindow != null) {
+                registeredWindow = ownerWindow;
+                ownerWindow.focusedProperty().addListener(windowFocusListener);
+                if (ownerWindow.getScene() != null) {
+                    registeredScene = ownerWindow.getScene();
+                    registeredScene.addEventFilter(MouseEvent.MOUSE_PRESSED, outsideClickHandler);
+                }
+            }
         }
     }
 
     public void hide() {
         if (popup.isShowing()) {
             popup.hide();
+        }
+        cleanupListeners();
+    }
+
+    private void cleanupListeners() {
+        if (registeredScene != null) {
+            registeredScene.removeEventFilter(MouseEvent.MOUSE_PRESSED, outsideClickHandler);
+            registeredScene = null;
+        }
+        if (registeredWindow != null) {
+            registeredWindow.focusedProperty().removeListener(windowFocusListener);
+            registeredWindow = null;
         }
     }
 
