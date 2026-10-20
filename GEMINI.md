@@ -36,6 +36,9 @@ O **slide-md** é um aplicativo desktop open-source desenvolvido em **Java 21** 
 ```
 slide-md/
 ├── .mvn/wrapper/               # Maven Wrapper portátil
+├── assets/                     # Mídias de apresentação e demonstração oficial
+│   ├── demo-preview.png        # Poster / screenshot em alta resolução
+│   └── slide-md-demo.mp4       # Vídeo de demonstração do aplicativo
 ├── package/
 │   └── windows/
 │       └── file-associations.properties  # Registro de extensão (.md) para instaladores

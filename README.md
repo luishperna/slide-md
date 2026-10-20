@@ -1,7 +1,15 @@
 # slide-md ⚡
 
 <p align="center">
-  <img src="./assets/roadster-2026-exterior.jpg" alt="slide-md preview" width="800" style="border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+  <video src="./assets/slide-md-demo.mp4" controls autoplay loop muted width="850" poster="./assets/demo-preview.png" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); max-width: 100%;">
+    <a href="./assets/slide-md-demo.mp4">
+      <img src="./assets/demo-preview.png" alt="slide-md Demonstração" width="850" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); max-width: 100%;" />
+    </a>
+  </video>
+</p>
+<p align="center">
+  <em>Demonstração em tempo real: navegação fluida, transições morph, caneta laser e editor integrado estilo VS Code.</em><br>
+  <a href="./assets/slide-md-demo.mp4">▶️ <strong>Assistir ao vídeo de demonstração em alta resolução (MP4)</strong></a>
 </p>
 
 <p align="center">
@@ -144,6 +152,9 @@ video: ./assets/roadster-video.mp4 [00:30-00:41]
 ```
 slide-md/
 ├── .mvn/wrapper/                   # Maven Wrapper multiplataforma portátil
+├── assets/                         # Mídias de apresentação e demonstração do README
+│   ├── demo-preview.png            # Screenshot e poster em alta resolução
+│   └── slide-md-demo.mp4           # Gravação de demonstração oficial do aplicativo
 ├── examples/                       # Apresentações completas de demonstração
 │   ├── README.md                   # Catálogo de apresentações de exemplo
 │   ├── demo.md                     # Demonstração oficial completa de recursos e atalhos
