@@ -43,7 +43,7 @@ public class HUDOverlay extends HBox {
         // Transparent buttons with colored icons only
         prevBtn = createIconButton("‹", "#38bdf8", 20, "Slide Anterior (Seta Esquerda / Espaço)", onPrev);
         nextBtn = createIconButton("›", "#38bdf8", 20, "Próximo Slide (Seta Direita)", onNext);
-        editorBtn = createIconButton("MD", "#a78bfa", 12.5, "Editor Markdown Flutuante (M)", onToggleEditor);
+        editorBtn = createIconButton("MD", "#a78bfa", 12.5, "Editor Markdown Lateral (M)", onToggleEditor);
         openBtn = createIconButton("📂", "#fbbf24", 15, "Abrir Arquivo Markdown (Ctrl+O)", onOpenFile);
 
         // Card contains strictly the action buttons
