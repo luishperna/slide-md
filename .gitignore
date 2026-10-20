@@ -1,23 +1,59 @@
+# Build artifacts
 target/
 dist/
 dependency-reduced-pom.xml
+.flattened-pom.xml
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Ensure Maven Wrapper jar is tracked
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### IDEs ###
+# IDE & Editor files
 .idea/
 *.iml
+*.ipr
+*.iws
 .vscode/
 .settings/
 .project
 .classpath
+.factorypath
+*.sublime-project
+*.sublime-workspace
 
-### Application Cache ###
+# Application Cache & Runtime Data
 .slide-md-cache/
+scratch/
 *.log
+logs/
 
-### OS ###
+# Java Crash & Profiling Logs
+hs_err_pid*
+replay_pid*
+
+# Temporary & Backup files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+.history/
+
+# Operating System files
 Thumbs.db
+ehthumbs.db
 Desktop.ini
+$RECYCLE.BIN/
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
