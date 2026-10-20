@@ -67,14 +67,21 @@ class SlideEditorHelperTest {
         int caret = md.indexOf("# Slide 2");
         String result = SlideEditorHelper.applyBackgroundToCurrentSlide(md, caret, "#1e293b");
 
-        assertTrue(result.contains("bg: #1e293b"));
-        // Slide 1 should not have bg
-        assertFalse(result.startsWith("bg:"));
+        assertTrue(result.contains("background: #1e293b"));
+        // Slide 1 should not have background
+        assertFalse(result.startsWith("background:"));
 
-        // If we apply again, it replaces the bg
+        // If we apply again, it replaces the background
         String updated = SlideEditorHelper.applyBackgroundToCurrentSlide(result, caret, "#090d16");
-        assertTrue(updated.contains("bg: #090d16"));
-        assertFalse(updated.contains("bg: #1e293b"));
+        assertTrue(updated.contains("background: #090d16"));
+        assertFalse(updated.contains("background: #1e293b"));
+
+        // If replacing an old "bg:" directive, it should update to "background:"
+        String oldBgSlide = "# Slide 1\n\n---\nbg: #333333\n# Slide 2";
+        int caretOld = oldBgSlide.indexOf("# Slide 2");
+        String updatedFromOld = SlideEditorHelper.applyBackgroundToCurrentSlide(oldBgSlide, caretOld, "#444444");
+        assertTrue(updatedFromOld.contains("background: #444444"));
+        assertFalse(updatedFromOld.contains("bg:"));
     }
 
     @Test
@@ -119,5 +126,59 @@ class SlideEditorHelperTest {
         // Caret in Slide 2 body belongs to Slide 1
         int slide2Body = md.indexOf("# Slide 2");
         assertEquals(1, SlideEditorHelper.getSlideIndexAtCaret(md, slide2Body));
+    }
+
+    @Test
+    void testGetParagraphIndexAtCaret() {
+        String text = "Line 0\nLine 1\nLine 2\nLine 3";
+        assertEquals(0, SlideEditorHelper.getParagraphIndexAtCaret(text, 0));
+        assertEquals(0, SlideEditorHelper.getParagraphIndexAtCaret(text, 4));
+        assertEquals(1, SlideEditorHelper.getParagraphIndexAtCaret(text, 7)); // start of Line 1
+        assertEquals(2, SlideEditorHelper.getParagraphIndexAtCaret(text, 14)); // start of Line 2
+        assertEquals(3, SlideEditorHelper.getParagraphIndexAtCaret(text, 21)); // start of Line 3
+    }
+
+    @Test
+    void testGetSlideStartParagraph() {
+        String md = "# Slide 1\nTexto do slide 1\n\n---\n\n# Slide 2\nTexto do slide 2\n\n---\n\n# Slide 3\nTexto do slide 3";
+
+        // Slide 0 deve iniciar no topo absoluto (parágrafo 0)
+        assertEquals(0, SlideEditorHelper.getSlideStartParagraph(md, 0));
+
+        // Slide 1 deve posicionar no '---' do separador (parágrafo 3)
+        int p1 = SlideEditorHelper.getSlideStartParagraph(md, 1);
+        String[] lines = md.split("\r?\n");
+        assertEquals("---", lines[p1].trim());
+
+        // Slide 2 deve posicionar no segundo '---' (parágrafo 7)
+        int p2 = SlideEditorHelper.getSlideStartParagraph(md, 2);
+        assertEquals("---", lines[p2].trim());
+        assertTrue(p2 > p1);
+    }
+
+    @Test
+    void testGetSlideStartParagraphWithFrontmatter() {
+        String md = """
+                ---
+                background: #111111
+                color: #ffffff
+                ---
+
+                # Slide 1
+                Conteudo
+
+                ---
+
+                # Slide 2
+                Conteudo 2
+                """;
+
+        // Slide 0 começa no parágrafo 0
+        assertEquals(0, SlideEditorHelper.getSlideStartParagraph(md, 0));
+
+        // Slide 1 deve posicionar no '---' divisor
+        int p1 = SlideEditorHelper.getSlideStartParagraph(md, 1);
+        String[] lines = md.split("\r?\n");
+        assertEquals("---", lines[p1].trim());
     }
 }

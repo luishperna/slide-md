@@ -13,7 +13,7 @@ public final class SlideEditorHelper {
 
     private static final Pattern FRONTMATTER_PATTERN = Pattern.compile("^\\s*---\\r?\\n(.*?)\\r?\\n---\\r?\\n?", Pattern.DOTALL);
     private static final Pattern DELIMITER_PATTERN = Pattern.compile("(?m)^[ \\t]*---[ \\t]*$");
-    private static final Pattern BG_PATTERN = Pattern.compile("(?m)^[ \\t]*bg:[ \\t]*(.*)$");
+    private static final Pattern BG_PATTERN = Pattern.compile("(?m)^[ \\t]*(?:background|bg):[ \\t]*(.*)$");
 
     private SlideEditorHelper() {}
 
@@ -78,6 +78,40 @@ public final class SlideEditorHelper {
     }
 
     /**
+     * Retorna o índice do parágrafo/linha (0-indexed) correspondente ao offset caret no texto.
+     */
+    public static int getParagraphIndexAtCaret(String text, int caret) {
+        if (text == null || caret <= 0) return 0;
+        int limit = Math.min(caret, text.length());
+        int paragraph = 0;
+        for (int i = 0; i < limit; i++) {
+            if (text.charAt(i) == '\n') {
+                paragraph++;
+            }
+        }
+        return paragraph;
+    }
+
+    /**
+     * Retorna o índice do parágrafo (0-indexed) onde o slide indicado se inicia no editor.
+     * Para slides subsequentes (> 0), posiciona na linha do delimitador '---' que o antecede,
+     * permitindo que o usuário visualize o separador e o conteúdo completo do slide no topo.
+     */
+    public static int getSlideStartParagraph(String text, int slideIndex) {
+        if (text == null || text.isBlank() || slideIndex <= 0) return 0;
+        List<SlideRange> ranges = findSlideRanges(text);
+        if (ranges.isEmpty()) return 0;
+
+        int target = Math.min(slideIndex, ranges.size() - 1);
+        SlideRange r = ranges.get(target);
+        int paragraph = getParagraphIndexAtCaret(text, r.startIndex);
+        if (paragraph > 0) {
+            return paragraph - 1;
+        }
+        return paragraph;
+    }
+
+    /**
      * Retorna a posição do caractere no texto onde o conteúdo do slide indicado inicia.
      */
     public static int getSlideStartCaret(String text, int slideIndex) {
@@ -88,14 +122,22 @@ public final class SlideEditorHelper {
             // Se houver frontmatter global no slide 0, posiciona no início do conteúdo real do slide
             Matcher fmM = FRONTMATTER_PATTERN.matcher(text);
             if (fmM.find()) {
-                return fmM.end();
+                int end = fmM.end();
+                while (end < text.length() && (text.charAt(end) == '\r' || text.charAt(end) == '\n')) {
+                    end++;
+                }
+                return end;
             }
             return 0;
         }
 
         int target = Math.min(slideIndex, ranges.size() - 1);
         SlideRange r = ranges.get(target);
-        return r.startIndex;
+        int caret = r.startIndex;
+        while (caret < text.length() && (text.charAt(caret) == '\r' || text.charAt(caret) == '\n')) {
+            caret++;
+        }
+        return caret;
     }
 
     /**
@@ -156,12 +198,12 @@ public final class SlideEditorHelper {
     }
 
     /**
-     * Aplica ou atualiza a diretiva de fundo (bg) no slide onde o cursor está posicionado.
+     * Aplica ou atualiza a diretiva de fundo (background) no slide onde o cursor está posicionado.
      */
     public static String applyBackgroundToCurrentSlide(String text, int caret, String bgValue) {
         if (text == null) text = "";
         if (text.isBlank()) {
-            return "---\nbg: " + bgValue + "\n---\n\n# Novo Slide\n";
+            return "---\nbackground: " + bgValue + "\n---\n\n# Novo Slide\n";
         }
 
         List<SlideRange> ranges = findSlideRanges(text);
@@ -173,13 +215,13 @@ public final class SlideEditorHelper {
 
         String updatedSlideText;
         if (bgMatcher.find()) {
-            updatedSlideText = bgMatcher.replaceFirst("bg: " + bgValue);
+            updatedSlideText = bgMatcher.replaceFirst("background: " + bgValue);
         } else {
             String trimmed = currentSlideText.stripLeading();
             if (trimmed.startsWith("---")) {
-                updatedSlideText = "\nbg: " + bgValue + "\n" + trimmed;
+                updatedSlideText = "\nbackground: " + bgValue + "\n" + trimmed;
             } else {
-                updatedSlideText = "bg: " + bgValue + "\n" + currentSlideText;
+                updatedSlideText = "background: " + bgValue + "\n" + currentSlideText;
             }
         }
 
