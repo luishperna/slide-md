@@ -24,10 +24,31 @@ public class MarkdownNodeRenderer {
 
     private final File baseDir;
     private final Alignment alignment;
+    private final Color primaryColor;
+    private final boolean isWhiteDefault;
 
     public MarkdownNodeRenderer(File baseDir, Alignment alignment) {
+        this(baseDir, alignment, null);
+    }
+
+    public MarkdownNodeRenderer(File baseDir, Alignment alignment, String colorDirective) {
         this.baseDir = baseDir;
         this.alignment = alignment != null ? alignment : Alignment.CENTER;
+
+        Color parsed = null;
+        if (colorDirective != null && !colorDirective.isBlank()) {
+            try {
+                parsed = Color.web(colorDirective.trim());
+            } catch (Exception ignored) {}
+        }
+
+        if (parsed != null) {
+            this.primaryColor = parsed;
+            this.isWhiteDefault = (parsed.getRed() > 0.95 && parsed.getGreen() > 0.95 && parsed.getBlue() > 0.95);
+        } else {
+            this.primaryColor = Color.WHITE;
+            this.isWhiteDefault = true;
+        }
     }
 
     public List<Node> renderNodes(org.commonmark.node.Node root) {
@@ -35,9 +56,13 @@ public class MarkdownNodeRenderer {
         org.commonmark.node.Node current = root.getFirstChild();
 
         while (current != null) {
-            Node fxNode = renderBlock(current);
-            if (fxNode != null) {
-                fxNodes.add(fxNode);
+            if (current instanceof Paragraph paragraph && containsVideoPlaceholder(paragraph)) {
+                renderParagraphWithVideo(paragraph, fxNodes);
+            } else {
+                Node fxNode = renderBlock(current);
+                if (fxNode != null) {
+                    fxNodes.add(fxNode);
+                }
             }
             current = current.getNext();
         }
@@ -74,21 +99,20 @@ public class MarkdownNodeRenderer {
         Label label = new Label();
         label.setWrapText(true);
         label.setAlignment(toPos(alignment));
+        label.setTextAlignment(toTextAlignment(alignment));
+        label.setMaxWidth(Double.MAX_VALUE);
 
         int level = heading.getLevel();
         double fontSize = switch (level) {
             case 1 -> 48.0;
             case 2 -> 34.0;
             case 3 -> 26.0;
-            default -> 22.0;
+            case 4 -> 22.0;
+            case 5 -> 18.0;
+            default -> 16.0;
         };
 
-        String color = switch (level) {
-            case 1 -> "#ffffff";
-            case 2 -> "#94a3b8";
-            case 3 -> "#38bdf8";
-            default -> "#cbd5e1";
-        };
+        String color = getHeadingColor(level);
 
         label.setFont(Font.font("Segoe UI", FontWeight.BOLD, fontSize));
         label.setStyle("-fx-text-fill: " + color + "; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 10, 0, 0, 2);");
@@ -101,10 +125,53 @@ public class MarkdownNodeRenderer {
         return label;
     }
 
+    private String getHeadingColor(int level) {
+        if (isWhiteDefault) {
+            return switch (level) {
+                case 1 -> "#ffffff";
+                case 2 -> "#e2e8f0";
+                case 3 -> "#cbd5e1";
+                case 4 -> "#94a3b8";
+                case 5 -> "#64748b";
+                default -> "#475569";
+            };
+        }
+
+        // Se tiver cor principal configurada (ex: vermelho), vai clareando conforme a quantidade de #
+        double lightenFraction = switch (level) {
+            case 1 -> 0.0;
+            case 2 -> 0.20;
+            case 3 -> 0.40;
+            case 4 -> 0.60;
+            case 5 -> 0.75;
+            default -> 0.85;
+        };
+
+        Color interpolated = primaryColor.interpolate(Color.WHITE, lightenFraction);
+        return toHexString(interpolated);
+    }
+
+    private String toHexString(Color c) {
+        int r = (int) Math.round(c.getRed() * 255);
+        int g = (int) Math.round(c.getGreen() * 255);
+        int b = (int) Math.round(c.getBlue() * 255);
+        return String.format("#%02x%02x%02x", r, g, b);
+    }
+
+    public static class VideoPlaceholder extends Region {
+    }
+
     private Node renderParagraph(Paragraph paragraph) {
         // Check if paragraph contains only an image
         if (paragraph.getFirstChild() instanceof org.commonmark.node.Image imgNode && paragraph.getFirstChild().getNext() == null) {
             return renderImage(imgNode);
+        }
+
+        // Check if paragraph contains video placeholder marker
+        if (paragraph.getFirstChild() instanceof org.commonmark.node.Text textNode && paragraph.getFirstChild().getNext() == null) {
+            if ("@[video]".equals(textNode.getLiteral().trim())) {
+                return new VideoPlaceholder();
+            }
         }
 
         TextFlow flow = new TextFlow();
@@ -118,6 +185,59 @@ public class MarkdownNodeRenderer {
 
         VBox.setMargin(flow, new Insets(4, 0, 8, 0));
         return flow;
+    }
+
+    private boolean containsVideoPlaceholder(Paragraph paragraph) {
+        org.commonmark.node.Node child = paragraph.getFirstChild();
+        while (child != null) {
+            if (child instanceof org.commonmark.node.Text text && text.getLiteral().contains("@[video]")) {
+                return true;
+            }
+            child = child.getNext();
+        }
+        return false;
+    }
+
+    private void renderParagraphWithVideo(Paragraph paragraph, List<Node> outList) {
+        TextFlow beforeFlow = new TextFlow();
+        beforeFlow.setTextAlignment(toTextAlignment(alignment));
+
+        TextFlow afterFlow = new TextFlow();
+        afterFlow.setTextAlignment(toTextAlignment(alignment));
+
+        boolean foundVideo = false;
+        org.commonmark.node.Node child = paragraph.getFirstChild();
+        while (child != null) {
+            if (child instanceof org.commonmark.node.Text text && text.getLiteral().contains("@[video]")) {
+                foundVideo = true;
+                String remaining = text.getLiteral().replace("@[video]", "").trim();
+                if (!remaining.isEmpty()) {
+                    Text fxText = new Text(remaining);
+                    fxText.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 22));
+                    fxText.setFill(Color.web("#e2e8f0"));
+                    afterFlow.getChildren().add(fxText);
+                }
+            } else {
+                if (!foundVideo) {
+                    renderInline(child, beforeFlow, false, false);
+                } else {
+                    renderInline(child, afterFlow, false, false);
+                }
+            }
+            child = child.getNext();
+        }
+
+        if (!beforeFlow.getChildren().isEmpty()) {
+            VBox.setMargin(beforeFlow, new Insets(4, 0, 8, 0));
+            outList.add(beforeFlow);
+        }
+
+        outList.add(new VideoPlaceholder());
+
+        if (!afterFlow.getChildren().isEmpty()) {
+            VBox.setMargin(afterFlow, new Insets(4, 0, 8, 0));
+            outList.add(afterFlow);
+        }
     }
 
     private Node renderImage(org.commonmark.node.Image imgNode) {
@@ -152,17 +272,24 @@ public class MarkdownNodeRenderer {
         VBox vbox = new VBox(10);
         vbox.setAlignment(toPos(alignment));
 
+        Pos rowPos = switch (alignment) {
+            case RIGHT -> Pos.TOP_RIGHT;
+            case CENTER -> Pos.CENTER;
+            default -> Pos.TOP_LEFT;
+        };
+
         org.commonmark.node.Node child = list.getFirstChild();
         while (child != null) {
             if (child instanceof ListItem item) {
                 HBox row = new HBox(12);
-                row.setAlignment(Pos.TOP_LEFT);
+                row.setAlignment(rowPos);
 
                 Label bullet = new Label("•");
                 bullet.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
-                bullet.setStyle("-fx-text-fill: #38bdf8;");
+                bullet.setStyle("-fx-text-fill: " + toHexString(primaryColor) + ";");
 
                 TextFlow flow = new TextFlow();
+                flow.setTextAlignment(toTextAlignment(alignment));
                 org.commonmark.node.Node itemChild = item.getFirstChild();
                 while (itemChild != null) {
                     if (itemChild instanceof Paragraph p) {
@@ -177,7 +304,11 @@ public class MarkdownNodeRenderer {
                     itemChild = itemChild.getNext();
                 }
 
-                row.getChildren().addAll(bullet, flow);
+                if (alignment == Alignment.RIGHT) {
+                    row.getChildren().addAll(flow, bullet);
+                } else {
+                    row.getChildren().addAll(bullet, flow);
+                }
                 vbox.getChildren().add(row);
             }
             child = child.getNext();
@@ -191,19 +322,26 @@ public class MarkdownNodeRenderer {
         VBox vbox = new VBox(10);
         vbox.setAlignment(toPos(alignment));
 
+        Pos rowPos = switch (alignment) {
+            case RIGHT -> Pos.TOP_RIGHT;
+            case CENTER -> Pos.CENTER;
+            default -> Pos.TOP_LEFT;
+        };
+
         int num = list.getStartNumber();
         org.commonmark.node.Node child = list.getFirstChild();
         while (child != null) {
             if (child instanceof ListItem item) {
                 HBox row = new HBox(10);
-                row.setAlignment(Pos.TOP_LEFT);
+                row.setAlignment(rowPos);
 
                 Label numLabel = new Label(num + ".");
                 numLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 22));
-                numLabel.setStyle("-fx-text-fill: #38bdf8;");
+                numLabel.setStyle("-fx-text-fill: " + toHexString(primaryColor) + ";");
                 num++;
 
                 TextFlow flow = new TextFlow();
+                flow.setTextAlignment(toTextAlignment(alignment));
                 org.commonmark.node.Node itemChild = item.getFirstChild();
                 while (itemChild != null) {
                     if (itemChild instanceof Paragraph p) {
@@ -218,7 +356,11 @@ public class MarkdownNodeRenderer {
                     itemChild = itemChild.getNext();
                 }
 
-                row.getChildren().addAll(numLabel, flow);
+                if (alignment == Alignment.RIGHT) {
+                    row.getChildren().addAll(flow, numLabel);
+                } else {
+                    row.getChildren().addAll(numLabel, flow);
+                }
                 vbox.getChildren().add(row);
             }
             child = child.getNext();
@@ -230,14 +372,20 @@ public class MarkdownNodeRenderer {
 
     private Node renderBlockQuote(BlockQuote blockQuote) {
         HBox box = new HBox(14);
-        box.setAlignment(Pos.CENTER_LEFT);
+        Pos boxPos = switch (alignment) {
+            case RIGHT -> Pos.CENTER_RIGHT;
+            case CENTER -> Pos.CENTER;
+            default -> Pos.CENTER_LEFT;
+        };
+        box.setAlignment(boxPos);
         box.setStyle("-fx-background-color: rgba(255, 255, 255, 0.04); -fx-background-radius: 8px; -fx-padding: 12px 18px;");
 
         Region bar = new Region();
         bar.setPrefWidth(4);
-        bar.setStyle("-fx-background-color: #38bdf8; -fx-background-radius: 4px;");
+        bar.setStyle("-fx-background-color: " + toHexString(primaryColor) + "; -fx-background-radius: 4px;");
 
         TextFlow flow = new TextFlow();
+        flow.setTextAlignment(toTextAlignment(alignment));
         org.commonmark.node.Node child = blockQuote.getFirstChild();
         while (child != null) {
             if (child instanceof Paragraph p) {
@@ -250,7 +398,11 @@ public class MarkdownNodeRenderer {
             child = child.getNext();
         }
 
-        box.getChildren().addAll(bar, flow);
+        if (alignment == Alignment.RIGHT) {
+            box.getChildren().addAll(flow, bar);
+        } else {
+            box.getChildren().addAll(bar, flow);
+        }
         VBox.setMargin(box, new Insets(10, 0, 10, 0));
         return box;
     }
@@ -272,7 +424,12 @@ public class MarkdownNodeRenderer {
 
     private void renderInline(org.commonmark.node.Node node, TextFlow flow, boolean bold, boolean italic) {
         if (node instanceof org.commonmark.node.Text text) {
-            Text fxText = new Text(text.getLiteral());
+            String literal = text.getLiteral();
+            if (literal.contains("@[video]")) {
+                literal = literal.replace("@[video]", "").trim();
+                if (literal.isEmpty()) return;
+            }
+            Text fxText = new Text(literal);
             fxText.setFont(Font.font("Segoe UI",
                     bold ? FontWeight.BOLD : FontWeight.NORMAL,
                     italic ? FontPosture.ITALIC : FontPosture.REGULAR,
@@ -328,6 +485,8 @@ public class MarkdownNodeRenderer {
         return switch (align) {
             case LEFT -> Pos.CENTER_LEFT;
             case RIGHT -> Pos.CENTER_RIGHT;
+            case TOP -> Pos.TOP_CENTER;
+            case DOWN -> Pos.BOTTOM_CENTER;
             case CENTER -> Pos.CENTER;
         };
     }
@@ -336,7 +495,7 @@ public class MarkdownNodeRenderer {
         return switch (align) {
             case LEFT -> javafx.scene.text.TextAlignment.LEFT;
             case RIGHT -> javafx.scene.text.TextAlignment.RIGHT;
-            case CENTER -> javafx.scene.text.TextAlignment.CENTER;
+            case CENTER, TOP, DOWN -> javafx.scene.text.TextAlignment.CENTER;
         };
     }
 }
