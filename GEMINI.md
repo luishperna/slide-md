@@ -53,18 +53,24 @@ slide-md/
 │   │   ├── animation/
 │   │   │   └── TransitionManager.java    # Transições animadas fluidas (slide, fade, zoom)
 │   │   ├── ui/
+│   │   │   ├── AppTitleBar.java          # Barra de título e controle integrada (modo dock e navegação)
+│   │   │   ├── LaserPenOverlay.java      # Camada acelerada de rastro/caneta laser translúcida
 │   │   │   ├── SlideView.java            # Canvas visual do slide (fundo, vídeo, Markdown)
 │   │   │   ├── MarkdownNodeRenderer.java # Mapeia nós CommonMark para nós estilizados JavaFX
-│   │   │   ├── FloatingEditorWindow.java # Editor flutuante interno com Live Preview
+│   │   │   ├── SideEditorPanel.java      # Painel lateral de edição integrado (estilo VS Code)
 │   │   │   └── HUDOverlay.java           # Barra de controle flutuante com auto-hide
 │   │   └── video/
 │   │       ├── FFmpegLocator.java        # Localizador dinâmico de FFmpeg em múltiplos SOs
 │   │       └── FFmpegService.java        # Processador de vídeo (cortes/junções em disco)
 │   └── test/java/com/slidemd/
 │       ├── parser/MarkdownSlideParserTest.java # Testes de parsing e diretivas
-│       └── video/FFmpegServiceTest.java       # Testes de hash, cache e detecção
-├── demo.md                     # Apresentação de demonstração padrão
+├── examples/
+│   ├── demo.md                 # Apresentação de demonstração (todas as diretivas e atalhos)
+│   └── tesla-roadster/         # Keynote comercial minimalista (com mídia)
+│       ├── tesla-roadster.md
+│       └── README.md
 ├── pom.xml                     # Configurações do Maven e dependências
+├── LICENSE                     # Licença MIT
 └── README.md                   # Documentação do usuário final
 ```
 
@@ -72,40 +78,45 @@ slide-md/
 
 ## 📜 Padrão de Sintaxe do Markdown (`slide-md`)
 
-Slides são delimitados por `---`. No topo de cada slide, podem ser definidas diretivas no estilo chave-valor ou comentários HTML:
+Slides são delimitados por `---`. No topo de cada slide (ou no frontmatter global inicial), podem ser definidas diretivas diretas (`chave: valor`) ou comentários HTML (`<!-- chave: valor -->`):
 
 ```markdown
 ---
-bg: linear-gradient(to bottom right, #090d16, #1e293b)
-align: center
-transition: slide
+background: [#090d16, #1e293b, 45%]
+alignment: center
+transition: morph
 ---
 
 # Título Principal
 Subtítulo elegante
 
 ---
-bg: #0f172a
-align: left
-video: ./assets/demo.mp4
-cut: 00:05 - 00:25
-loop: true
+background: [#0f172a, #1e293b, 50%]
+alignment: left
+video: ./assets/demo.mp4 [00:05-00:25]
 ---
 
 # Slide com Vídeo
-- O corte funciona nativamente em Java (0ms de processamento)
-- Reprodução contínua e sem travamentos
+- O corte funciona inline entre colchetes: `[00:05-00:25]`
+- Múltiplos vídeos concatenados são separados por vírgula: `video: v1.mp4, v2.mp4`
+- O vídeo entra pausado e toca ao dar mais um clique para frente
 ```
 
-### Diretivas Suportadas:
-- `bg`: Cor hexadecimal (`#1e293b`), gradiente CSS (`linear-gradient(...)`) ou imagem (`url(foto.jpg)` ou `./foto.jpg`).
-- `align`: `center`, `left`, `right`.
-- `transition`: `slide` (deslizamento lateral), `fade` (crossfade), `zoom` (zoom cinematográfico).
-- `video`: Caminho relativo ou absoluto para arquivo de vídeo `.mp4`.
-- `cut`: Intervalo de corte no formato `MM:SS - MM:SS` ou segundos `SS - SS`.
-- `join`: Lista de vídeos para junção/reprodução sequencial (`v1.mp4, v2.mp4`).
-- `autoplay`: `true` (padrão) ou `false`.
-- `loop`: `true` ou `false` (padrão).
+### Diretivas Suportadas (5 Diretrizes Oficiais Limpas):
+- `background`:
+  - **Gradiente em colchetes**: `[#1e293b, #segunda_cor, #terceira_cor, porcentagem_da_direcao]` (ex.: `[#1e293b, #0f172a, 45%]`, `[#1e293b, #0f172a, 50%]`, `[#1e293b, #0f172a, to right]` ou simplesmente `[#1e293b, #0f172a]`).
+  - Cor hexadecimal sólida (`#1e293b`) ou imagem (`url(foto.jpg)` ou `./foto.jpg`).
+- `alignment`: `center`, `left`, `right`, `top`, `down` (aceita também `bottom` e `up`).
+- `transition`: `morph` (scroll contínuo e orgânico onde os slides e elementos deslizam conectados), `slide` (deslizamento clássico), `fade` (crossfade), `zoom` (zoom sutil).
+- `video`: Caminho do arquivo de vídeo `.mp4`.
+  - **Corte inline**: adicione o intervalo entre colchetes na frente do arquivo (ex.: `video: demo.mp4 [00:10-00:45]`).
+  - **Junção**: separe múltiplos vídeos por vírgula na mesma linha (ex.: `video: v1.mp4, v2.mp4`).
+  - **Reprodução**: O vídeo não toca sozinho (autoplay sempre falso). O primeiro clique para frente inicia o vídeo; o próximo clique avança para o slide seguinte.
+  - **Ciclo**: Toca uma vez até o fim (loop sempre falso).
+- `image`: Caminho relativo ou URL da imagem do slide ou inline (`image: ./assets/foto.jpg`).
+- `color`: Cor temática principal para títulos e marcadores de tópicos (`#ef4444`, `#38bdf8`, `red`). Conforme a quantidade de `#` aumenta (H2, H3...), a cor clareia suavemente em direção ao branco/tom pastel. O ponto do tópico (`•`) recebe a cor base.
+- `sound`: Caminho relativo, absoluto ou URL para arquivo de áudio de fundo (`.mp3`, `.wav`, `.aac`). Loop sempre falso e volume padrão normalizado em 1.0.
+- **Comentários HTML**: `<!-- background: [#1e293b, #0f172a] -->` continuam suportados para configurar o slide sem aparecer na apresentação.
 
 ---
 
@@ -117,10 +128,13 @@ loop: true
 | <kbd>←</kbd> / <kbd>Page Up</kbd> / <kbd>Backspace</kbd> | Slide anterior |
 | <kbd>Home</kbd> / <kbd>End</kbd> | Primeiro / Último slide |
 | <kbd>Ctrl</kbd> + <kbd>O</kbd> (<kbd>Cmd</kbd> + <kbd>O</kbd> no Mac) | Abrir arquivo Markdown visualmente |
-| <kbd>M</kbd> ou <kbd>E</kbd> | Alternar Janela Flutuante do Editor |
+| <kbd>M</kbd> ou <kbd>E</kbd> | Alternar Painel Lateral do Editor |
+| <kbd>P</kbd> | Alternar Modo Caneta / Rastro Laser |
+| <kbd>C</kbd> | Limpar traços da caneta |
 | <kbd>F</kbd> ou <kbd>F11</kbd> | Alternar Tela Cheia |
 | <kbd>R</kbd> | Recarregar arquivo do disco |
-| <kbd>Esc</kbd> | Fechar editor flutuante ou sair da tela cheia |
+| <kbd>U</kbd> | Silenciar / Reativar Áudio (Mute/Unmute) |
+| <kbd>Esc</kbd> | Desativar caneta, fechar painel lateral ou sair da tela cheia |
 
 ---
 
@@ -136,15 +150,18 @@ Todos os comandos devem ser executados a partir da raiz do projeto:
 .\mvnw.cmd javafx:run
 
 # 3. Executar abrindo um arquivo específico
-.\mvnw.cmd javafx:run -Djavafx.args="meu-arquivo.md"
+.\mvnw.cmd javafx:run -Djavafx.args="examples/demo.md"
 
-# 4. Gerar Fat JAR standalone (~10MB executável)
+# 4. Executar com música de fundo contínua (flag --music)
+.\mvnw.cmd javafx:run -Djavafx.args="examples/demo.md --music ./audio/theme.mp3"
+
+# 5. Gerar Fat JAR standalone (~10MB executável)
 .\mvnw.cmd package -DskipTests
 
-# 5. Executar o Fat JAR
-java -jar target\slide-md-1.0.0-SNAPSHOT.jar demo.md
+# 6. Executar o Fat JAR com música de fundo
+java -jar target\slide-md-1.0.0-SNAPSHOT.jar examples/demo.md --music soundtrack.mp3
 
-# 6. Gerar pacote nativo do Windows com JRE embutido (jpackage)
+# 7. Gerar pacote nativo do Windows com JRE embutido (jpackage)
 jpackage --type app-image --dest dist --name slide-md --input target --main-jar slide-md-1.0.0-SNAPSHOT.jar --main-class com.slidemd.MainLauncher
 ```
 
