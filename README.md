@@ -9,7 +9,6 @@
   <a href="https://openjdk.org/projects/jdk/21/"><img src="https://img.shields.io/badge/Java-21%20LTS-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 21" /></a>
   <a href="https://openjfx.io/"><img src="https://img.shields.io/badge/JavaFX-21.0.5-FF6500?style=for-the-badge&logo=openjdk&logoColor=white" alt="JavaFX 21" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="License MIT" /></a>
-  <a href="#-contribuindo"><img src="https://img.shields.io/badge/PRs-Welcome-brightgreen?style=for-the-badge" alt="PRs Welcome" /></a>
 </p>
 
 <p align="center">
@@ -279,18 +278,6 @@ java -jar target/slide-md-1.0.0-SNAPSHOT.jar examples/demo.md
 
 ---
 
-## 🤝 Contribuindo
-
-Contribuições da comunidade são muito bem-vindas! Se você deseja sugerir novos recursos, corrigir bugs ou melhorar a documentação:
-
-1. Faça um **Fork** do repositório.
-2. Crie uma branch para a sua feature (`git checkout -b feature/minha-melhoria`).
-3. Siga o padrão de [Conventional Commits](https://www.conventionalcommits.org/) (ex.: `feat: adiciona transicao flip`, `fix: corrige alinhamento de listas`).
-4. Certifique-se de que todos os testes passem com `.\mvnw.cmd test`.
-5. Abra um **Pull Request**.
-
----
-
 ## 📄 Licença
 
 Este projeto é distribuído sob a licença livre e permissiva **MIT**.  
@@ -299,5 +286,5 @@ Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
 ---
 
 <p align="center">
-  Desenvolvido com ☕ e código aberto por <strong>Luís Perna</strong> e contribuidores.
+  Desenvolvido com ☕ e código aberto por <strong>Luís Perna</strong>.
 </p>

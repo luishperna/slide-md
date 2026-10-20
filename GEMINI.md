@@ -170,7 +170,7 @@ jpackage --type app-image --dest dist --name slide-md --input target --main-jar 
 
 ---
 
-## 🛡️ Diretrizes para Contribuições e Agentes de IA
+## 🛡️ Diretrizes de Desenvolvimento e Agentes de IA
 
 1. **Nunca utilize caminhos absolutos ou específicos de uma máquina**:
    - Sempre utilize caminhos relativos ou faça uso do `FFmpegLocator` e diretórios do usuário (`~/.slide-md`).

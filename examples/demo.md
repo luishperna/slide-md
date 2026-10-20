@@ -118,6 +118,5 @@ alignment: center
 
 - **Código Aberto** · Licença livre e permissiva MIT
 - **Repositório no GitHub** · [github.com/luishperna/slide-md](https://github.com/luishperna/slide-md)
-- **Contribuições** · Sugestões, issues e Pull Requests são bem-vindos!
 
 > Desenvolvido em Java 21, JavaFX, CommonMark e RichTextFX por **Luís Perna**
