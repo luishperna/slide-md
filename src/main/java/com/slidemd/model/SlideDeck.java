@@ -9,6 +9,10 @@ public class SlideDeck {
     private String title = "Untitled Presentation";
     private final List<Slide> slides = new ArrayList<>();
     private File sourceFile;
+    private String music;
+    private boolean musicLoop = true;
+    private double musicVolume = 1.0;
+    private String color;
 
     public SlideDeck() {}
 
@@ -52,5 +56,61 @@ public class SlideDeck {
             return slides.get(index);
         }
         return null;
+    }
+
+    public String getMusic() {
+        return music;
+    }
+
+    public void setMusic(String music) {
+        this.music = music;
+    }
+
+    public boolean isMusicLoop() {
+        return musicLoop;
+    }
+
+    public void setMusicLoop(boolean musicLoop) {
+        this.musicLoop = musicLoop;
+    }
+
+    public double getMusicVolume() {
+        return musicVolume;
+    }
+
+    public void setMusicVolume(double musicVolume) {
+        this.musicVolume = musicVolume;
+    }
+
+    public String getSound() {
+        return music;
+    }
+
+    public void setSound(String sound) {
+        this.music = sound;
+    }
+
+    public boolean isSoundLoop() {
+        return musicLoop;
+    }
+
+    public void setSoundLoop(boolean soundLoop) {
+        this.musicLoop = soundLoop;
+    }
+
+    public double getSoundVolume() {
+        return musicVolume;
+    }
+
+    public void setSoundVolume(double soundVolume) {
+        this.musicVolume = soundVolume;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
     }
 }

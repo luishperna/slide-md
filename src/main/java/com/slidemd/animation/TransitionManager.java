@@ -52,88 +52,115 @@ public class TransitionManager {
             container.getChildren().add(incoming);
         }
 
-        incoming.setOpacity(0.0);
-        incoming.setTranslateX(0);
-        incoming.setTranslateY(0);
-
-        outgoing.setTranslateX(0);
-        outgoing.setTranslateY(0);
-
-        ParallelTransition pt = new ParallelTransition();
-
-        // 1. Outgoing slide: gentle upward or downward drift and fade out
-        FadeTransition outFade = new FadeTransition(Duration.millis(260), outgoing);
-        outFade.setToValue(0.0);
-        outFade.setInterpolator(FLUID_INTERPOLATOR);
-        pt.getChildren().add(outFade);
-
-        if (outgoing.getContentBox() != null) {
-            double outY = forward ? -40.0 : 40.0;
-            TranslateTransition outSlide = new TranslateTransition(Duration.millis(260), outgoing.getContentBox());
-            outSlide.setToY(outY);
-            outSlide.setInterpolator(FLUID_INTERPOLATOR);
-            pt.getChildren().add(outSlide);
+        // Clip retangular para conter os elementos dentro da área da apresentação
+        if (container.getClip() == null) {
+            javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
+            clip.widthProperty().bind(container.widthProperty());
+            clip.heightProperty().bind(container.heightProperty());
+            container.setClip(clip);
         }
 
-        // 2. Incoming slide background crossfade
-        FadeTransition inFade = new FadeTransition(Duration.millis(320), incoming);
-        inFade.setToValue(1.0);
-        inFade.setInterpolator(FLUID_INTERPOLATOR);
-        pt.getChildren().add(inFade);
+        double width = container.getWidth() > 0 ? container.getWidth() : 1280;
+        double direction = forward ? 1.0 : -1.0;
+        double travelDistance = width + 150.0;
 
-        // 3. Staggered cascade entrance for incoming slide elements (PowerPoint Morph effect)
-        if (incoming.getContentBox() != null) {
-            var children = incoming.getContentBox().getChildren();
-            double inStartY = forward ? 45.0 : -45.0;
-            incoming.getContentBox().setTranslateY(0);
+        // O FUNDO FICA FIXO: nenhum slide desliza por inteiro
+        outgoing.setTranslateX(0);
+        outgoing.setTranslateY(0);
+        outgoing.setScaleX(1.0);
+        outgoing.setScaleY(1.0);
 
-            for (int i = 0; i < children.size(); i++) {
-                javafx.scene.Node node = children.get(i);
-                node.setTranslateY(inStartY);
-                node.setOpacity(0.0);
-                node.setScaleX(0.95);
-                node.setScaleY(0.95);
+        incoming.setTranslateX(0);
+        incoming.setTranslateY(0);
+        incoming.setScaleX(1.0);
+        incoming.setScaleY(1.0);
 
-                Duration delay = Duration.millis(Math.min(i * 45, 180));
+        // Fundo do novo slide faz um crossfade suave
+        incoming.setOpacity(0.0);
+        FadeTransition bgFade = new FadeTransition(Duration.millis(480), incoming);
+        bgFade.setFromValue(0.0);
+        bgFade.setToValue(1.0);
+        bgFade.setInterpolator(Interpolator.EASE_BOTH);
 
-                TranslateTransition tt = new TranslateTransition(Duration.millis(380), node);
-                tt.setToY(0);
-                tt.setInterpolator(FLUID_INTERPOLATOR);
+        ParallelTransition pt = new ParallelTransition(bgFade);
+        Interpolator morphSpline = Interpolator.SPLINE(0.15, 0.95, 0.25, 1.0);
+
+        // 1. Elementos do slide atual: ANDAM para fora do slide (-direction * travelDistance)
+        if (outgoing.getContentBox() != null) {
+            var outChildren = outgoing.getContentBox().getChildren();
+            double outTargetX = -direction * travelDistance;
+
+            for (int i = 0; i < outChildren.size(); i++) {
+                javafx.scene.Node node = outChildren.get(i);
+                Duration delay = Duration.millis(Math.min(i * 28, 140));
+
+                TranslateTransition tt = new TranslateTransition(Duration.millis(600), node);
+                tt.setToX(outTargetX);
+                tt.setInterpolator(morphSpline);
                 tt.setDelay(delay);
 
-                FadeTransition ft = new FadeTransition(Duration.millis(320), node);
-                ft.setToValue(1.0);
-                ft.setInterpolator(FLUID_INTERPOLATOR);
+                FadeTransition ft = new FadeTransition(Duration.millis(480), node);
+                ft.setToValue(0.0);
                 ft.setDelay(delay);
 
-                ScaleTransition st = new ScaleTransition(Duration.millis(380), node);
-                st.setToX(1.0);
-                st.setToY(1.0);
-                st.setInterpolator(FLUID_INTERPOLATOR);
-                st.setDelay(delay);
+                pt.getChildren().addAll(tt, ft);
+            }
+        }
 
-                pt.getChildren().addAll(tt, ft, st);
+        // 2. Elementos do novo slide: VÊM DE FORA DO SLIDE (+direction * travelDistance) e andam para a tela
+        if (incoming.getContentBox() != null) {
+            var inChildren = incoming.getContentBox().getChildren();
+            double inStartX = direction * travelDistance;
+
+            for (int i = 0; i < inChildren.size(); i++) {
+                javafx.scene.Node node = inChildren.get(i);
+                node.setTranslateX(inStartX);
+                node.setOpacity(0.0);
+
+                Duration delay = Duration.millis(80 + Math.min(i * 40, 240));
+
+                TranslateTransition tt = new TranslateTransition(Duration.millis(680), node);
+                tt.setToX(0);
+                tt.setInterpolator(morphSpline);
+                tt.setDelay(delay);
+
+                FadeTransition ft = new FadeTransition(Duration.millis(520), node);
+                ft.setToValue(1.0);
+                ft.setDelay(delay);
+
+                pt.getChildren().addAll(tt, ft);
             }
         }
 
         pt.setOnFinished(e -> {
             container.getChildren().remove(outgoing);
             outgoing.setOpacity(1.0);
+            outgoing.setTranslateX(0);
+
+            // Reseta posições e opacidades dos elementos do slide que saiu
             if (outgoing.getContentBox() != null) {
-                outgoing.getContentBox().setTranslateY(0);
-            }
-            if (incoming.getContentBox() != null) {
-                for (javafx.scene.Node node : incoming.getContentBox().getChildren()) {
-                    node.setTranslateY(0);
+                outgoing.getContentBox().setTranslateX(0);
+                for (javafx.scene.Node node : outgoing.getContentBox().getChildren()) {
+                    node.setTranslateX(0);
                     node.setOpacity(1.0);
-                    node.setScaleX(1.0);
-                    node.setScaleY(1.0);
                 }
             }
+
+            // Garante posições e opacidades normais dos elementos do slide que entrou
+            if (incoming.getContentBox() != null) {
+                incoming.getContentBox().setTranslateX(0);
+                for (javafx.scene.Node node : incoming.getContentBox().getChildren()) {
+                    node.setTranslateX(0);
+                    node.setOpacity(1.0);
+                }
+            }
+
+            incoming.setOpacity(1.0);
             incoming.onSlideEnter();
             isAnimating = false;
             if (onFinished != null) onFinished.run();
         });
+
         pt.play();
     }
 

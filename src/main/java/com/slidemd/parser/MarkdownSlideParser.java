@@ -58,6 +58,19 @@ public class MarkdownSlideParser {
             String frontmatterText = fmM.group(1);
             remainingContent = content.substring(fmM.end());
             parseGlobalFrontmatter(frontmatterText, globalDirectives, slideOverrides);
+
+            // Apply global presentation-level sound directives
+            for (Map.Entry<String, String> entry : globalDirectives.entrySet()) {
+                String k = entry.getKey().toLowerCase();
+                String v = entry.getValue();
+                if ("sound".equals(k)) {
+                    deck.setSound(cleanUrl(v));
+                    deck.setSoundLoop(false);
+                    deck.setSoundVolume(1.0);
+                } else if ("color".equals(k)) {
+                    deck.setColor(v.trim());
+                }
+            }
         }
 
         // Split slides in remaining content by '---'
@@ -114,6 +127,10 @@ public class MarkdownSlideParser {
                 String key = fmM.group(1).toLowerCase();
                 String val = fmM.group(2).trim();
 
+                if (!isKnownDirectiveKey(key)) {
+                    continue;
+                }
+
                 if (line.startsWith(" ") || line.startsWith("\t")) {
                     if (currentOverrideSlide != null) {
                         slideOverrides.get(currentOverrideSlide).put(key, val);
@@ -131,7 +148,7 @@ public class MarkdownSlideParser {
         String[] parts = line.split("[,;]");
         for (String part : parts) {
             Matcher m = FRONTMATTER_LINE.matcher(part.trim());
-            if (m.matches()) {
+            if (m.matches() && isKnownDirectiveKey(m.group(1))) {
                 targetMap.put(m.group(1).toLowerCase(), m.group(2).trim());
             }
         }
@@ -156,25 +173,24 @@ public class MarkdownSlideParser {
 
         String workingContent = rawContent;
 
-        // 3. Parse HTML comment directives: <!-- bg: #ff0000 -->
+        // 3. Parse HTML comment directives: <!-- background: #ff0000 -->
         Matcher commentMatcher = HTML_COMMENT_DIRECTIVE.matcher(workingContent);
         while (commentMatcher.find()) {
             String key = commentMatcher.group(1).toLowerCase();
             String value = commentMatcher.group(2).trim();
-            applyDirective(slide, key, value);
+            if (isKnownDirectiveKey(key)) {
+                applyDirective(slide, key, value);
+            }
         }
-        workingContent = commentMatcher.replaceAll("");
+        // Remove todos os comentários HTML do corpo visual do slide
+        workingContent = Pattern.compile("<!--[\\s\\S]*?-->").matcher(workingContent).replaceAll("");
 
         // 4. Parse in-slide directives at the beginning of the slide
         String[] lines = workingContent.split("\\r?\\n");
         StringBuilder markdownBody = new StringBuilder();
         boolean inHeader = true;
 
-        String videoSource = null;
-        String videoCut = null;
-        String videoJoin = null;
-        boolean videoAutoplay = true;
-        boolean videoLoop = false;
+        String rawVideo = null;
 
         for (String line : lines) {
             String lineTrim = line.trim();
@@ -186,13 +202,10 @@ public class MarkdownSlideParser {
                 if (fmM.matches() && isKnownDirectiveKey(fmM.group(1))) {
                     String key = fmM.group(1).toLowerCase();
                     String val = fmM.group(2).trim();
-                    switch (key) {
-                        case "video" -> videoSource = val;
-                        case "cut", "video-cut" -> videoCut = val;
-                        case "join", "video-join" -> videoJoin = val;
-                        case "autoplay" -> videoAutoplay = Boolean.parseBoolean(val);
-                        case "loop" -> videoLoop = Boolean.parseBoolean(val);
-                        default -> applyDirective(slide, key, val);
+                    if ("video".equals(key)) {
+                        rawVideo = val;
+                    } else {
+                        applyDirective(slide, key, val);
                     }
                     continue;
                 } else {
@@ -205,39 +218,38 @@ public class MarkdownSlideParser {
                 slide.addNote(lineTrim.substring(5).trim());
             } else if (lineTrim.equals("???")) {
                 // marp style note separator
+            } else if (lineTrim.startsWith("image:") || lineTrim.startsWith("Image:")) {
+                String imgPath = cleanUrl(lineTrim.substring(6).trim());
+                if (!imgPath.isEmpty()) {
+                    slide.setImage(imgPath);
+                    if (markdownBody.length() > 0 && !markdownBody.toString().endsWith("\n\n")) {
+                        if (!markdownBody.toString().endsWith("\n")) {
+                            markdownBody.append("\n");
+                        }
+                        markdownBody.append("\n");
+                    }
+                    markdownBody.append("![](").append(imgPath).append(")\n\n");
+                }
+            } else if (lineTrim.startsWith("video:") || lineTrim.startsWith("Video:")) {
+                String vVal = lineTrim.substring(6).trim();
+                if (!vVal.isEmpty()) {
+                    rawVideo = vVal;
+                    if (markdownBody.length() > 0 && !markdownBody.toString().endsWith("\n\n")) {
+                        if (!markdownBody.toString().endsWith("\n")) {
+                            markdownBody.append("\n");
+                        }
+                        markdownBody.append("\n");
+                    }
+                    markdownBody.append("@[video]\n\n");
+                }
             } else {
                 markdownBody.append(line).append("\n");
             }
         }
 
-        // Video specification
-        if (videoSource != null || videoJoin != null || slide.getVideoSpec() != null) {
-            List<String> joinList = new ArrayList<>();
-            if (videoJoin != null) {
-                String[] parts = videoJoin.split("[,;]");
-                for (String p : parts) {
-                    if (!p.trim().isEmpty()) {
-                        joinList.add(p.trim());
-                    }
-                }
-            } else if (slide.getVideoSpec() != null) {
-                joinList.addAll(slide.getVideoSpec().getJoinFiles());
-            }
-
-            String cutStart = null;
-            String cutEnd = null;
-            if (videoCut != null) {
-                String[] cutParts = videoCut.split("[-–—]");
-                if (cutParts.length >= 1) cutStart = cutParts[0].trim();
-                if (cutParts.length >= 2) cutEnd = cutParts[1].trim();
-            } else if (slide.getVideoSpec() != null) {
-                cutStart = slide.getVideoSpec().getCutStart();
-                cutEnd = slide.getVideoSpec().getCutEnd();
-            }
-
-            String finalSrc = videoSource != null ? videoSource : (slide.getVideoSpec() != null ? slide.getVideoSpec().getSourcePath() : null);
-            VideoSpec spec = new VideoSpec(finalSrc, cutStart, cutEnd, joinList, videoAutoplay, videoLoop);
-            slide.setVideoSpec(spec);
+        // Apply video directive if specified
+        if (rawVideo != null) {
+            slide.setVideoSpec(parseVideoSpec(rawVideo, false, false));
         }
 
         // Clean markdown content (without directives)
@@ -257,30 +269,91 @@ public class MarkdownSlideParser {
     }
 
     private boolean isKnownDirectiveKey(String key) {
+        if (key == null) return false;
         String k = key.toLowerCase();
         return switch (k) {
-            case "bg", "background", "background-color", "background-image",
-                 "align", "alignment", "layout", "transition",
-                 "video", "cut", "video-cut", "join", "video-join",
-                 "autoplay", "loop" -> true;
+            case "background", "alignment", "transition", "video", "sound", "image", "color" -> true;
             default -> false;
         };
     }
 
     private void applyDirective(Slide slide, String key, String value) {
         switch (key.toLowerCase()) {
-            case "bg", "background", "background-color" -> {
-                if (value.startsWith("url(") || value.endsWith(".png") || value.endsWith(".jpg") || value.endsWith(".jpeg") || value.endsWith(".webp")) {
-                    slide.setBackgroundImage(cleanUrl(value));
+            case "background" -> {
+                String trimmed = value.trim();
+                if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                    slide.setBackgroundColor(parseGradientBracketNotation(trimmed));
+                } else if (trimmed.startsWith("url(") || trimmed.endsWith(".png") || trimmed.endsWith(".jpg") || trimmed.endsWith(".jpeg") || trimmed.endsWith(".webp")) {
+                    slide.setBackgroundImage(cleanUrl(trimmed));
                 } else {
-                    slide.setBackgroundColor(value);
+                    slide.setBackgroundColor(trimmed);
                 }
             }
-            case "background-image" -> slide.setBackgroundImage(cleanUrl(value));
-            case "align", "alignment" -> slide.setAlignment(Alignment.fromString(value));
+            case "alignment" -> slide.setAlignment(Alignment.fromString(value));
             case "transition" -> slide.setTransition(value.trim().toLowerCase());
+            case "video" -> slide.setVideoSpec(parseVideoSpec(value, false, false));
+            case "image" -> slide.setImage(cleanUrl(value));
+            case "color" -> slide.setColor(value.trim());
+            case "sound" -> {
+                slide.setSound(cleanUrl(value));
+                slide.setSoundLoop(false);
+                slide.setSoundVolume(1.0);
+            }
         }
     }
+
+    public static VideoSpec parseVideoSpec(String rawDirective, boolean autoplay, boolean loop) {
+        if (rawDirective == null || rawDirective.isBlank()) {
+            return null;
+        }
+        // Divide por vírgulas que não estão dentro de colchetes
+        String[] parts = rawDirective.split(",(?![^\\[]*\\])");
+        List<VideoItem> items = new ArrayList<>();
+        Pattern bracketPattern = Pattern.compile("\\[(.*?)\\]");
+
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (trimmed.isEmpty()) continue;
+
+            Matcher bm = bracketPattern.matcher(trimmed);
+            String cutStart = null;
+            String cutEnd = null;
+            String path = trimmed;
+
+            if (bm.find()) {
+                String cutRange = bm.group(1).trim();
+                String[] cutParts = cutRange.split("[-–—]");
+                if (cutParts.length >= 1 && !cutParts[0].trim().isEmpty()) {
+                    cutStart = cutParts[0].trim();
+                }
+                if (cutParts.length >= 2 && !cutParts[1].trim().isEmpty()) {
+                    cutEnd = cutParts[1].trim();
+                }
+                path = bm.replaceAll("").trim();
+            }
+
+            if ((path.startsWith("\"") && path.endsWith("\"")) || (path.startsWith("'") && path.endsWith("'"))) {
+                path = path.substring(1, path.length() - 1).trim();
+            }
+
+            if (!path.isEmpty()) {
+                items.add(new VideoItem(path, cutStart, cutEnd));
+            }
+        }
+
+        if (items.isEmpty()) {
+            return null;
+        }
+
+        VideoItem first = items.get(0);
+        List<String> joinPaths = items.size() > 1
+                ? items.stream().map(VideoItem::path).toList()
+                : Collections.emptyList();
+
+        return new VideoSpec(first.path(), first.cutStart(), first.cutEnd(), joinPaths, autoplay, loop);
+    }
+
+    private record VideoItem(String path, String cutStart, String cutEnd) {}
 
     private String cleanUrl(String val) {
         String res = val.trim();
@@ -297,6 +370,102 @@ public class MarkdownSlideParser {
         HeadingVisitor visitor = new HeadingVisitor();
         root.accept(visitor);
         return visitor.firstHeadingText;
+    }
+
+    public static String parseGradientBracketNotation(String value) {
+        if (value == null) return "";
+        String trimmed = value.trim();
+        if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
+            return trimmed;
+        }
+
+        String inner = trimmed.substring(1, trimmed.length() - 1).trim();
+        if (inner.isEmpty()) return "";
+
+        String[] parts = inner.split(",");
+        List<String> colors = new ArrayList<>();
+        String directionParam = null;
+
+        for (int i = 0; i < parts.length; i++) {
+            String p = parts[i].trim();
+            if (p.isEmpty()) continue;
+
+            if (i == parts.length - 1 && isDirectionToken(p)) {
+                directionParam = p;
+            } else {
+                colors.add(p);
+            }
+        }
+
+        if (colors.isEmpty()) {
+            if (directionParam != null) {
+                return directionParam;
+            }
+            return "";
+        }
+
+        if (colors.size() == 1 && directionParam == null) {
+            return colors.get(0);
+        }
+
+        String cssDirection = resolveCssDirection(directionParam);
+        return "linear-gradient(" + cssDirection + ", " + String.join(", ", colors) + ")";
+    }
+
+    private static boolean isDirectionToken(String token) {
+        String lower = token.toLowerCase();
+        if (lower.endsWith("%") || lower.endsWith("deg")) return true;
+        if (lower.startsWith("to ")) return true;
+        return switch (lower) {
+            case "right", "left", "bottom", "top", "horizontal", "vertical", "diagonal", "down", "up" -> true;
+            default -> false;
+        };
+    }
+
+    private static String resolveCssDirection(String dir) {
+        if (dir == null || dir.isBlank()) {
+            return "to bottom right";
+        }
+        String lower = dir.toLowerCase().trim();
+
+        if (lower.startsWith("to ")) {
+            return lower;
+        }
+
+        if (lower.endsWith("%")) {
+            try {
+                double pct = Double.parseDouble(lower.replace("%", "").trim());
+                if (pct <= 20.0) return "to right";
+                if (pct <= 45.0) return "to bottom right";
+                if (pct <= 70.0) return "to bottom";
+                if (pct <= 90.0) return "to bottom left";
+                return "to left";
+            } catch (NumberFormatException ignored) {}
+        }
+
+        if (lower.endsWith("deg")) {
+            try {
+                double deg = Double.parseDouble(lower.replace("deg", "").trim()) % 360;
+                if (deg < 0) deg += 360;
+                if (deg >= 337.5 || deg < 22.5) return "to right";
+                if (deg < 67.5) return "to bottom right";
+                if (deg < 112.5) return "to bottom";
+                if (deg < 157.5) return "to bottom left";
+                if (deg < 202.5) return "to left";
+                if (deg < 247.5) return "to top left";
+                if (deg < 292.5) return "to top";
+                return "to top right";
+            } catch (NumberFormatException ignored) {}
+        }
+
+        return switch (lower) {
+            case "right", "horizontal" -> "to right";
+            case "bottom", "vertical", "down" -> "to bottom";
+            case "left" -> "to left";
+            case "top", "up" -> "to top";
+            case "diagonal" -> "to bottom right";
+            default -> "to bottom right";
+        };
     }
 
     public Node parseMarkdownAst(String markdown) {

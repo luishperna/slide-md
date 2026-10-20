@@ -109,6 +109,10 @@ public class FFmpegService {
         cmd.add(inputFile.getAbsolutePath());
         cmd.add("-c");
         cmd.add("copy");
+        cmd.add("-avoid_negative_ts");
+        cmd.add("make_zero");
+        cmd.add("-movflags");
+        cmd.add("+faststart");
         cmd.add(targetFile.getAbsolutePath());
 
         int exitCode = runProcess(cmd);
@@ -130,8 +134,24 @@ public class FFmpegService {
             cmd.add(inputFile.getAbsolutePath());
             cmd.add("-c:v");
             cmd.add("libx264");
+            cmd.add("-preset");
+            cmd.add("veryfast");
+            cmd.add("-crf");
+            cmd.add("23");
+            cmd.add("-pix_fmt");
+            cmd.add("yuv420p");
+            cmd.add("-vf");
+            cmd.add("scale='min(1920,trunc(iw/2)*2)':-2,scale=trunc(iw/2)*2:trunc(ih/2)*2");
+            cmd.add("-map");
+            cmd.add("0:v:0");
+            cmd.add("-map");
+            cmd.add("0:a?");
             cmd.add("-c:a");
             cmd.add("aac");
+            cmd.add("-b:a");
+            cmd.add("128k");
+            cmd.add("-movflags");
+            cmd.add("+faststart");
             cmd.add(targetFile.getAbsolutePath());
             runProcess(cmd);
         }
@@ -166,19 +186,84 @@ public class FFmpegService {
             cmd.add(listFile.getAbsolutePath());
             cmd.add("-c");
             cmd.add("copy");
+            cmd.add("-movflags");
+            cmd.add("+faststart");
             cmd.add(targetFile.getAbsolutePath());
 
             int exitCode = runProcess(cmd);
             if (exitCode != 0 || !targetFile.exists() || targetFile.length() == 0) {
                 LOGGER.warning("Fast stream concat failed, falling back to filter_complex...");
-                // Filter complex re-encoding if files have different formats
-                // (Omitted if copy works, but good to ensure target is valid)
             }
         } finally {
             listFile.delete();
         }
 
         return targetFile.exists() && targetFile.length() > 0 ? targetFile : null;
+    }
+
+    public CompletableFuture<File> sanitizeVideoAsync(File inputFile) {
+        return CompletableFuture.supplyAsync(() -> sanitizeVideo(inputFile), executor);
+    }
+
+    public File sanitizeVideo(File inputFile) {
+        if (inputFile == null || !inputFile.exists() || !isAvailable()) {
+            return inputFile;
+        }
+        // Usamos cacheKey v2 para garantir que caches gerados com -c copy sejam regenerados
+        String cacheKey = "sanitized_v2_" + Long.toHexString(inputFile.lastModified()) + "_" + inputFile.length();
+        File cachedTarget = CACHE_DIR.resolve(cacheKey + ".mp4").toFile();
+        if (cachedTarget.exists() && cachedTarget.length() > 0) {
+            return cachedTarget;
+        }
+        try {
+            List<String> cmd = new ArrayList<>();
+            cmd.add(ffmpegExecutable);
+            cmd.add("-y");
+            cmd.add("-i");
+            cmd.add(inputFile.getAbsolutePath());
+            // 1. Codec H.264 garantido para JavaFX
+            cmd.add("-c:v");
+            cmd.add("libx264");
+            cmd.add("-preset");
+            cmd.add("veryfast");
+            cmd.add("-crf");
+            cmd.add("23");
+            // 2. Pixel format 8-bit YUV420P obrigatório para o decodificador JavaFX GStreamer
+            cmd.add("-pix_fmt");
+            cmd.add("yuv420p");
+            // 3. Garante dimensões pares e escala para no máximo 1080p
+            cmd.add("-vf");
+            cmd.add("scale='min(1920,trunc(iw/2)*2)':-2,scale=trunc(iw/2)*2:trunc(ih/2)*2");
+            // 4. Mapeia áudio com AAC universal se existir (se não existir, o ? evita erro)
+            cmd.add("-map");
+            cmd.add("0:v:0");
+            cmd.add("-map");
+            cmd.add("0:a?");
+            cmd.add("-c:a");
+            cmd.add("aac");
+            cmd.add("-b:a");
+            cmd.add("128k");
+            // 5. Moov atom no início para carregamento instantâneo
+            cmd.add("-movflags");
+            cmd.add("+faststart");
+            cmd.add(cachedTarget.getAbsolutePath());
+
+            int exitCode = runProcess(cmd);
+            if (exitCode == 0 && cachedTarget.exists() && cachedTarget.length() > 0) {
+                LOGGER.info("Successfully sanitized video for JavaFX playback: " + cachedTarget.getName());
+                return cachedTarget;
+            } else {
+                if (cachedTarget.exists()) {
+                    cachedTarget.delete();
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to sanitize video via FFmpeg", e);
+            if (cachedTarget.exists()) {
+                cachedTarget.delete();
+            }
+        }
+        return inputFile;
     }
 
     private int runProcess(List<String> cmd) throws IOException, InterruptedException {

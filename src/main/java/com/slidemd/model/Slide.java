@@ -11,9 +11,14 @@ public class Slide {
     private String title;
     private String backgroundColor;
     private String backgroundImage;
+    private String image;
+    private String color;
     private Alignment alignment = Alignment.CENTER;
     private String transition = "slide"; // slide, fade, zoom, morph
     private VideoSpec videoSpec;
+    private String music;
+    private Boolean musicLoop;
+    private Double musicVolume;
     private final List<String> notes = new ArrayList<>();
 
     public Slide(int index, String rawMarkdown) {
@@ -62,6 +67,22 @@ public class Slide {
         this.backgroundImage = backgroundImage;
     }
 
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
     public Alignment getAlignment() {
         return alignment;
     }
@@ -86,6 +107,54 @@ public class Slide {
         this.videoSpec = videoSpec;
     }
 
+    public String getMusic() {
+        return music;
+    }
+
+    public void setMusic(String music) {
+        this.music = music;
+    }
+
+    public Boolean isMusicLoop() {
+        return musicLoop;
+    }
+
+    public void setMusicLoop(Boolean musicLoop) {
+        this.musicLoop = musicLoop;
+    }
+
+    public Double getMusicVolume() {
+        return musicVolume;
+    }
+
+    public void setMusicVolume(Double musicVolume) {
+        this.musicVolume = musicVolume;
+    }
+
+    public String getSound() {
+        return music;
+    }
+
+    public void setSound(String sound) {
+        this.music = sound;
+    }
+
+    public Boolean isSoundLoop() {
+        return musicLoop;
+    }
+
+    public void setSoundLoop(Boolean soundLoop) {
+        this.musicLoop = soundLoop;
+    }
+
+    public Double getSoundVolume() {
+        return musicVolume;
+    }
+
+    public void setSoundVolume(Double soundVolume) {
+        this.musicVolume = soundVolume;
+    }
+
     public List<String> getNotes() {
         return Collections.unmodifiableList(notes);
     }
@@ -96,5 +165,13 @@ public class Slide {
 
     public boolean hasVideo() {
         return videoSpec != null && (videoSpec.getSourcePath() != null || videoSpec.hasJoin());
+    }
+
+    public boolean hasMusic() {
+        return music != null && !music.isBlank() && !music.equalsIgnoreCase("none") && !music.equalsIgnoreCase("off");
+    }
+
+    public boolean hasSound() {
+        return hasMusic();
     }
 }
