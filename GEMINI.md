@@ -38,6 +38,7 @@ slide-md/
 ├── .mvn/wrapper/               # Maven Wrapper portátil
 ├── assets/                     # Mídias de apresentação e demonstração oficial
 │   ├── demo-preview.png        # Poster / screenshot em alta resolução
+│   ├── slide-md-demo.gif       # Demonstração animada para o GitHub README
 │   └── slide-md-demo.mp4       # Vídeo de demonstração do aplicativo
 ├── package/
 │   └── windows/
